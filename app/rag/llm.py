@@ -13,19 +13,29 @@ EMBEDDING_BATCH_SIZE: int = 100
 
 
 class Embedder(Protocol):
-    def embed_texts(self, texts: list[str]) -> list[list[float]]: ...
+    """Turns text into embedding vectors; lets tests substitute the OpenAI API."""
+
+    def embed_texts(self, texts: list[str]) -> list[list[float]]:
+        """Return one embedding vector per input text, in input order."""
 
 
 class AnswerGenerator(Protocol):
-    def generate_answer(self, question: str, snippets: list[RetrievedChunk]) -> str: ...
+    """Produces a grounded answer from retrieved snippets; lets tests substitute the OpenAI API."""
+
+    def generate_answer(self, question: str, snippets: list[RetrievedChunk]) -> str:
+        """Answer `question` using only the given `snippets`."""
 
 
 class OpenAIEmbedder:
+    """`Embedder` backed by the OpenAI embeddings API."""
+
     def __init__(self, client: OpenAI, model: str) -> None:
+        """Store the OpenAI client and the embedding model name."""
         self._client = client
         self._model = model
 
     def embed_texts(self, texts: list[str]) -> list[list[float]]:
+        """Embed texts in batches of `EMBEDDING_BATCH_SIZE`, preserving input order."""
         vectors: list[list[float]] = []
         for start in range(0, len(texts), EMBEDDING_BATCH_SIZE):
             batch = texts[start : start + EMBEDDING_BATCH_SIZE]
@@ -36,11 +46,15 @@ class OpenAIEmbedder:
 
 
 class OpenAIAnswerGenerator:
+    """`AnswerGenerator` backed by the OpenAI chat completions API."""
+
     def __init__(self, client: OpenAI, model: str) -> None:
+        """Store the OpenAI client and the chat model name."""
         self._client = client
         self._model = model
 
     def generate_answer(self, question: str, snippets: list[RetrievedChunk]) -> str:
+        """Ask the chat model to answer `question` from numbered `snippets` at temperature 0."""
         context = "\n\n".join(
             f"[{index}] {chunk.filename}: {chunk.text}"
             for index, chunk in enumerate(snippets, start=1)

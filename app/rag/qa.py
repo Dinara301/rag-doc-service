@@ -9,6 +9,8 @@ NO_HITS_ANSWER: str = "I do not have enough information in the ingested document
 
 @dataclass(frozen=True)
 class QueryResult:
+    """An answer plus the retrieved chunks it is grounded in."""
+
     answer: str
     sources: list[RetrievedChunk]
 
@@ -21,6 +23,11 @@ def answer_question(
     generator: AnswerGenerator,
     vector_store: VectorStore,
 ) -> QueryResult:
+    """Embed the question, retrieve the `top_k` nearest chunks and generate a grounded answer.
+
+    When nothing is retrieved, return a fixed message (distinguishing an empty corpus from
+    no relevant hits) with no sources, without calling the generator.
+    """
     query_embedding = embedder.embed_texts([question])[0]
     retrieved = vector_store.query(embedding=query_embedding, top_k=top_k)
     if not retrieved:

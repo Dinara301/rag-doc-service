@@ -12,6 +12,8 @@ DEFAULT_CHROMA_PATH: Path = PROJECT_ROOT / "data" / "chroma"
 
 
 class Settings(BaseModel):
+    """Runtime configuration: OpenAI credentials and models, storage path, chunking and upload limits."""
+
     openai_api_key: str = ""
     chat_model: str = CHAT_MODEL
     embedding_model: str = EMBEDDING_MODEL
@@ -25,5 +27,6 @@ class Settings(BaseModel):
 
 
 def load_settings() -> Settings:
+    """Build `Settings`, reading `OPENAI_API_KEY` from the environment or a local `.env` file."""
     load_dotenv()
     return Settings(openai_api_key=os.getenv("OPENAI_API_KEY", ""))

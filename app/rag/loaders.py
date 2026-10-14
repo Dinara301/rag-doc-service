@@ -12,22 +12,32 @@ class DocumentRejectedError(ValueError):
 
 
 class UnsupportedFileTypeError(DocumentRejectedError):
-    pass
+    """The file extension is not in the allowed set."""
 
 
 class EmptyDocumentError(DocumentRejectedError):
-    pass
+    """The file contains no extractable text."""
 
 
 class FileTooLargeError(DocumentRejectedError):
-    pass
+    """The file exceeds the configured maximum size."""
 
 
 class CorruptDocumentError(DocumentRejectedError):
-    pass
+    """The file could not be parsed as the type its extension claims (e.g. a broken PDF)."""
 
 
 def extract_text(filename: str, data: bytes, settings: Settings) -> str:
+    """Validate an uploaded file and return its stripped plain text.
+
+    PDFs are parsed with pypdf; other allowed types are decoded as UTF-8.
+
+    Raises:
+        FileTooLargeError: `data` is larger than `settings.max_file_bytes`.
+        UnsupportedFileTypeError: the extension is not allowed.
+        CorruptDocumentError: a PDF could not be read.
+        EmptyDocumentError: no text could be extracted.
+    """
     if len(data) > settings.max_file_bytes:
         raise FileTooLargeError(f"{filename} exceeds the {settings.max_file_bytes} byte limit")
     suffix = Path(filename).suffix.lower()
@@ -41,6 +51,7 @@ def extract_text(filename: str, data: bytes, settings: Settings) -> str:
 
 
 def _pdf_text(filename: str, data: bytes) -> str:
+    """Extract text from every page of a PDF, translating pypdf errors to `CorruptDocumentError`."""
     try:
         reader = PdfReader(BytesIO(data))
         return "\n".join(page.extract_text() or "" for page in reader.pages)

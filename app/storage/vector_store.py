@@ -10,6 +10,8 @@ from chromadb.config import Settings as ChromaSettings
 
 @dataclass(frozen=True)
 class StoredChunk:
+    """A chunk of document text to persist, tagged with its source document."""
+
     document_id: str
     filename: str
     text: str
@@ -17,6 +19,8 @@ class StoredChunk:
 
 @dataclass(frozen=True)
 class RetrievedChunk:
+    """A chunk returned by a similarity search, with a score in [0, 1] (higher is closer)."""
+
     document_id: str
     filename: str
     text: str
@@ -25,6 +29,8 @@ class RetrievedChunk:
 
 @dataclass(frozen=True)
 class DocumentRecord:
+    """Summary of one ingested document: its id, filename and number of stored chunks."""
+
     document_id: str
     filename: str
     chunk_count: int
@@ -34,23 +40,32 @@ _ChromaEmbeddings = list[Sequence[float] | Sequence[int]]
 
 
 class VectorStore(Protocol):
+    """Storage abstraction the RAG layer depends on; hides the concrete vector database."""
+
     def add_chunks(
         self,
         *,
         ids: list[str],
         chunks: list[StoredChunk],
         embeddings: list[list[float]],
-    ) -> None: ...
+    ) -> None:
+        """Persist chunks with their embeddings; `ids`, `chunks` and `embeddings` align by index."""
 
-    def query(self, *, embedding: list[float], top_k: int) -> list[RetrievedChunk]: ...
+    def query(self, *, embedding: list[float], top_k: int) -> list[RetrievedChunk]:
+        """Return up to `top_k` chunks nearest to `embedding`, best match first."""
 
-    def list_documents(self) -> list[DocumentRecord]: ...
+    def list_documents(self) -> list[DocumentRecord]:
+        """Return a summary of every ingested document."""
 
-    def delete_document(self, document_id: str) -> bool: ...
+    def delete_document(self, document_id: str) -> bool:
+        """Delete all chunks of a document; return False if the document does not exist."""
 
 
 class ChromaVectorStore:
+    """`VectorStore` backed by a local persistent ChromaDB collection using cosine distance."""
+
     def __init__(self, persist_path: Path, collection_name: str = "documents") -> None:
+        """Open (or create) the persistent Chroma store at `persist_path` with telemetry disabled."""
         persist_path.mkdir(parents=True, exist_ok=True)
         self._client = chromadb.PersistentClient(
             path=str(persist_path),
@@ -68,6 +83,7 @@ class ChromaVectorStore:
         chunks: list[StoredChunk],
         embeddings: list[list[float]],
     ) -> None:
+        """Persist chunks with their embeddings; `ids`, `chunks` and `embeddings` align by index."""
         if not ids:
             return
         vectors: _ChromaEmbeddings = [*embeddings]
@@ -81,6 +97,10 @@ class ChromaVectorStore:
         )
 
     def query(self, *, embedding: list[float], top_k: int) -> list[RetrievedChunk]:
+        """Return up to `top_k` chunks nearest to `embedding`, best match first.
+
+        The score is `1 - cosine distance`, clamped to [0, 1]. An empty store returns `[]`.
+        """
         total = self._collection.count()
         if total == 0:
             return []
@@ -108,6 +128,7 @@ class ChromaVectorStore:
         return retrieved
 
     def list_documents(self) -> list[DocumentRecord]:
+        """Return a summary of every ingested document, counting chunks per document."""
         payload = self._collection.get(include=["metadatas"])
         chunk_counts: Counter[tuple[str, str]] = Counter()
         for metadata in payload.get("metadatas") or []:
@@ -119,6 +140,7 @@ class ChromaVectorStore:
         ]
 
     def delete_document(self, document_id: str) -> bool:
+        """Delete all chunks of a document; return False if the document does not exist."""
         existing = self._collection.get(where={"document_id": document_id})
         ids = existing.get("ids") or []
         if not ids:

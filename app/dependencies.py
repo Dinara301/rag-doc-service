@@ -10,6 +10,8 @@ from app.storage.vector_store import VectorStore
 
 @dataclass
 class AppServices:
+    """The collaborators routes need, created once in `create_app` and stored on `app.state`."""
+
     settings: Settings
     vector_store: VectorStore
     embedder: Embedder
@@ -17,6 +19,7 @@ class AppServices:
 
 
 def get_services(request: Request) -> AppServices:
+    """FastAPI dependency returning the `AppServices` attached to the running app."""
     services = getattr(request.app.state, "services", None)
     if not isinstance(services, AppServices):
         raise RuntimeError("Application services are not initialized")
@@ -26,7 +29,11 @@ def get_services(request: Request) -> AppServices:
 def get_openai_ready_services(
     services: Annotated[AppServices, Depends(get_services)],
 ) -> AppServices:
-    """Services for routes that call OpenAI; fails fast when no API key is configured."""
+    """Services for routes that call OpenAI; fails fast when no API key is configured.
+
+    Raises:
+        HTTPException: 503 when `OPENAI_API_KEY` is not set.
+    """
     if not services.settings.openai_api_key:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,

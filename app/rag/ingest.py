@@ -10,6 +10,8 @@ from app.storage.vector_store import DocumentRecord, StoredChunk, VectorStore
 
 @dataclass(frozen=True)
 class IncomingFile:
+    """An uploaded file as raw bytes, independent of the web framework."""
+
     filename: str
     data: bytes
 
@@ -21,7 +23,11 @@ def ingest_documents(
     embedder: Embedder,
     vector_store: VectorStore,
 ) -> list[DocumentRecord]:
-    """Validate every file first, then embed and store, so bad input stores nothing."""
+    """Validate every file first, then embed and store, so bad input stores nothing.
+
+    Raises:
+        DocumentRejectedError: any file fails validation (nothing is stored).
+    """
     extracted = [
         (file.filename, extract_text(file.filename, file.data, settings)) for file in files
     ]
@@ -45,6 +51,7 @@ def _ingest_text(
     embedder: Embedder,
     vector_store: VectorStore,
 ) -> DocumentRecord:
+    """Chunk one document's text, embed the chunks and store them under a new document id."""
     pieces = chunk_text(
         text,
         chunk_size_tokens=settings.chunk_size_tokens,

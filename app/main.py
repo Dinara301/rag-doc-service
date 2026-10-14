@@ -20,7 +20,14 @@ def create_app(
     embedder: Embedder | None = None,
     generator: AnswerGenerator | None = None,
 ) -> FastAPI:
-    """App factory. Run with: uvicorn app.main:create_app --factory --reload"""
+    """Build the FastAPI application and wire its services.
+
+    Every argument is optional: `settings` defaults to `load_settings()`, and the vector
+    store, embedder and generator default to the Chroma/OpenAI implementations. Tests pass
+    fakes to avoid live API calls.
+
+    Run with: ``uvicorn app.main:create_app --factory --reload``
+    """
     resolved = settings or load_settings()
 
     if embedder is None or generator is None:

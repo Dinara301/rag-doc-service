@@ -10,6 +10,7 @@ MARKDOWN = ("widgets.md", FIXTURE.read_bytes(), "text/markdown")
 
 
 def test_ingest_and_query_returns_json_with_sources(app: FastAPI) -> None:
+    """Upload, list and query a document end to end, checking the JSON contract."""
     with client_for(app) as client:
         ingest = client.post("/documents", files={"files": MARKDOWN})
         assert ingest.status_code == 200
@@ -34,6 +35,7 @@ def test_ingest_and_query_returns_json_with_sources(app: FastAPI) -> None:
 
 
 def test_multiple_files_in_one_request(app: FastAPI) -> None:
+    """Several files uploaded together are all ingested, in upload order."""
     files = [
         ("files", MARKDOWN),
         ("files", ("notes.txt", b"Restart the worker with `make restart`.", "text/plain")),
@@ -47,6 +49,7 @@ def test_multiple_files_in_one_request(app: FastAPI) -> None:
 
 
 def test_query_empty_corpus(app: FastAPI) -> None:
+    """Querying with nothing ingested returns 200, an explanatory answer and no sources."""
     with client_for(app) as client:
         response = client.post("/query", json={"question": "Anything here?"})
     assert response.status_code == 200
@@ -56,12 +59,14 @@ def test_query_empty_corpus(app: FastAPI) -> None:
 
 
 def test_query_validation_rejects_empty_question(app: FastAPI) -> None:
+    """An empty question fails request validation with 422."""
     with client_for(app) as client:
         response = client.post("/query", json={"question": ""})
     assert response.status_code == 422
 
 
 def test_unsupported_file_type_returns_400(app: FastAPI) -> None:
+    """Uploading an unsupported extension returns 400 with the reason."""
     with client_for(app) as client:
         files = {"files": ("notes.docx", b"not supported", "application/octet-stream")}
         response = client.post("/documents", files=files)
@@ -70,6 +75,7 @@ def test_unsupported_file_type_returns_400(app: FastAPI) -> None:
 
 
 def test_corrupt_pdf_returns_400(app: FastAPI) -> None:
+    """A file named .pdf that is not a PDF returns 400 rather than a server error."""
     with client_for(app) as client:
         files = {"files": ("broken.pdf", b"definitely not a pdf", "application/pdf")}
         response = client.post("/documents", files=files)
@@ -77,6 +83,7 @@ def test_corrupt_pdf_returns_400(app: FastAPI) -> None:
 
 
 def test_bad_file_in_batch_stores_nothing(app: FastAPI) -> None:
+    """If any file in a batch is rejected, none of the batch is stored."""
     files = [
         ("files", MARKDOWN),
         ("files", ("notes.docx", b"not supported", "application/octet-stream")),
@@ -87,6 +94,7 @@ def test_bad_file_in_batch_stores_nothing(app: FastAPI) -> None:
 
 
 def test_delete_document(app: FastAPI) -> None:
+    """Deleting removes the document; deleting it again returns 404."""
     with client_for(app) as client:
         ingest = client.post("/documents", files={"files": MARKDOWN})
         document_id = ingest.json()["documents"][0]["document_id"]
@@ -96,6 +104,7 @@ def test_delete_document(app: FastAPI) -> None:
 
 
 def test_missing_api_key_returns_503(make_app: AppFactory) -> None:
+    """OpenAI-backed routes return 503 without an API key; listing still works."""
     app = make_app(api_key="")
     with client_for(app) as client:
         ingest = client.post("/documents", files={"files": MARKDOWN})
@@ -107,6 +116,7 @@ def test_missing_api_key_returns_503(make_app: AppFactory) -> None:
 
 
 def test_openai_failure_returns_502(make_app: AppFactory) -> None:
+    """An OpenAI error during ingest or query surfaces as 502 with a generic message."""
     app = make_app(embedder=FailingEmbedder())
     with client_for(app) as client:
         ingest = client.post("/documents", files={"files": MARKDOWN})

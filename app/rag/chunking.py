@@ -11,7 +11,7 @@ def chunk_text(text: str, chunk_size_tokens: int, overlap_tokens: int) -> list[s
     Units are Markdown sections / paragraphs. Oversized units fall back to a
     fixed character window. Each chunk after the first is prefixed with the
     last ``overlap_tokens`` of the previous chunk, so it may exceed the
-    nominal size by up to the overlap.
+    nominal size by up to the overlap. Tokens are approximated as 4 characters.
     """
     normalized = text.strip()
     if not normalized:
@@ -26,17 +26,23 @@ def chunk_text(text: str, chunk_size_tokens: int, overlap_tokens: int) -> list[s
 
 
 def _split_units(text: str) -> list[str]:
+    """Split text into non-empty units at Markdown headings and blank lines."""
     units = [part.strip() for part in _UNIT_SPLIT.split(text) if part.strip()]
     return units or [text]
 
 
 def _pack_units(units: list[str], chunk_size_chars: int) -> list[str]:
+    """Greedily join consecutive units into chunks no longer than `chunk_size_chars`.
+
+    A single unit longer than the limit is split with `_window` instead.
+    """
     chunks: list[str] = []
     current: list[str] = []
     current_len = 0
     separator_len = len(_UNIT_SEPARATOR)
 
     def flush() -> None:
+        """Emit the units gathered so far as one chunk and reset the buffer."""
         nonlocal current, current_len
         if current:
             chunks.append(_UNIT_SEPARATOR.join(current))
@@ -59,6 +65,7 @@ def _pack_units(units: list[str], chunk_size_chars: int) -> list[str]:
 
 
 def _window(text: str, chunk_size_chars: int) -> list[str]:
+    """Cut text into consecutive fixed-size character windows, dropping blank ones."""
     windows = (
         text[start : start + chunk_size_chars].strip()
         for start in range(0, len(text), chunk_size_chars)
@@ -67,6 +74,7 @@ def _window(text: str, chunk_size_chars: int) -> list[str]:
 
 
 def _apply_overlap(chunks: list[str], overlap_chars: int) -> list[str]:
+    """Prefix every chunk except the first with the trailing `overlap_chars` of its predecessor."""
     overlapped = [chunks[0]]
     for previous, current in zip(chunks, chunks[1:], strict=False):
         overlapped.append(f"{previous[-overlap_chars:]}{_UNIT_SEPARATOR}{current}".strip())
