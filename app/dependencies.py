@@ -34,7 +34,7 @@ def get_openai_ready_services(
     Raises:
         HTTPException: 503 when `OPENAI_API_KEY` is not set.
     """
-    if not services.settings.openai_api_key:
+    if not services.settings.openai_configured:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="OPENAI_API_KEY is not configured",

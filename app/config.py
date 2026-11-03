@@ -1,8 +1,7 @@
-import os
 from pathlib import Path
 
-from dotenv import load_dotenv
-from pydantic import BaseModel, Field
+from pydantic import Field, SecretStr
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 CHAT_MODEL: str = "gpt-4o-mini"
 EMBEDDING_MODEL: str = "text-embedding-3-small"
@@ -11,22 +10,25 @@ PROJECT_ROOT: Path = Path(__file__).resolve().parent.parent
 DEFAULT_CHROMA_PATH: Path = PROJECT_ROOT / "data" / "chroma"
 
 
-class Settings(BaseModel):
-    """Runtime configuration: OpenAI key and models, storage path, chunking, upload limits."""
+class Settings(BaseSettings):
+    """Runtime configuration, read from environment variables and a local `.env` file.
 
-    openai_api_key: str = ""
+    Field names map to upper-case variables (`openai_api_key` -> `OPENAI_API_KEY`).
+    Explicit constructor arguments override the environment, which keeps tests hermetic.
+    """
+
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+    openai_api_key: SecretStr = SecretStr("")
     chat_model: str = CHAT_MODEL
     embedding_model: str = EMBEDDING_MODEL
     chroma_path: Path = DEFAULT_CHROMA_PATH
-    chunk_size_tokens: int = 800
-    chunk_overlap_tokens: int = 150
-    max_file_bytes: int = 10 * 1024 * 1024
-    allowed_extensions: frozenset[str] = Field(
-        default_factory=lambda: frozenset({".pdf", ".md", ".markdown", ".txt"})
-    )
+    chunk_size_tokens: int = Field(default=800, gt=0)
+    chunk_overlap_tokens: int = Field(default=150, ge=0)
+    max_file_bytes: int = Field(default=10 * 1024 * 1024, gt=0)
+    allowed_extensions: frozenset[str] = frozenset({".pdf", ".md", ".markdown", ".txt"})
 
-
-def load_settings() -> Settings:
-    """Build `Settings`, reading `OPENAI_API_KEY` from the environment or a local `.env` file."""
-    load_dotenv()
-    return Settings(openai_api_key=os.getenv("OPENAI_API_KEY", ""))
+    @property
+    def openai_configured(self) -> bool:
+        """Whether a non-empty OpenAI API key is set."""
+        return bool(self.openai_api_key.get_secret_value())

@@ -47,3 +47,4 @@ Two or three bullets: what gets easier, harder, or must be watched.
 - [0001. Adopt ADRs and a changelog](0001-adopt-adrs-and-changelog.md) - Accepted
 - [0002. Relax dependency and infrastructure rules](0002-relax-dependency-and-infrastructure-rules.md) - Accepted
 - [0003. Use uv, ruff, and pre-commit](0003-use-uv-ruff-and-pre-commit.md) - Accepted
+- [0004. Config, lifespan, and health checks](0004-config-lifespan-and-health.md) - Accepted

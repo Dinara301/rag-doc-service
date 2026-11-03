@@ -3,7 +3,7 @@ from openai import OpenAI
 
 from app.api.errors import register_exception_handlers
 from app.api.routes import router
-from app.config import Settings, load_settings
+from app.config import Settings
 from app.dependencies import AppServices
 from app.rag.llm import AnswerGenerator, Embedder, OpenAIAnswerGenerator, OpenAIEmbedder
 from app.storage.vector_store import ChromaVectorStore, VectorStore
@@ -22,16 +22,16 @@ def create_app(
 ) -> FastAPI:
     """Build the FastAPI application and wire its services.
 
-    Every argument is optional: `settings` defaults to `load_settings()`, and the vector
+    Every argument is optional: `settings` defaults to `Settings()`, and the vector
     store, embedder and generator default to the Chroma/OpenAI implementations. Tests pass
     fakes to avoid live API calls.
 
     Run with: ``uvicorn app.main:create_app --factory --reload``
     """
-    resolved = settings or load_settings()
+    resolved = settings or Settings()
 
     if embedder is None or generator is None:
-        client = OpenAI(api_key=resolved.openai_api_key or _UNCONFIGURED_API_KEY)
+        client = OpenAI(api_key=resolved.openai_api_key.get_secret_value() or _UNCONFIGURED_API_KEY)
         embedder = embedder or OpenAIEmbedder(client, resolved.embedding_model)
         generator = generator or OpenAIAnswerGenerator(client, resolved.chat_model)
 
