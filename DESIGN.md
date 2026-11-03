@@ -131,7 +131,7 @@ The directory is created when the app is built (`create_app`), not on import, an
 | No documents / no hits | `200` + empty sources |
 | Unknown `document_id` on delete | `404` |
 | OpenAI HTTP/SDK error | `502` |
-| Missing `OPENAI_API_KEY` at runtime | `503` on ingest/query |
+| Missing `OPENAI_API_KEY` at runtime | `503` on ingest/query; `/health/ready` reports not ready, `/health/live` stays `200` |
 
 ## Security (v1)
 

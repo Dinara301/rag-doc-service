@@ -15,7 +15,7 @@ Every commit that changes behavior, configuration, tooling, or documentation add
 
 - `GET /health/live` and `GET /health/ready` (503 with a reason list when the API key is missing or the vector store is unreachable); `GET /health` remains as an alias of live.
 - `VectorStore.ping()` (Chroma heartbeat; returns False instead of raising), used by `/health/ready`.
-- ADR-0004 (config, lifespan, health) and a README Configuration table; `.env.example` lists every optional setting.
+- ADR-0004 (config, lifespan, health), a README Configuration table, and a README health section; `.env.example` lists every optional setting.
 
 ### Changed
 
