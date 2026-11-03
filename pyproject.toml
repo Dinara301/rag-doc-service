@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "doc-qa-api"
 version = "0.1.0"
 description = "REST API RAG service for question answering over uploaded tech docs."
-requires-python = ">=3.11"
+requires-python = ">=3.11,<3.15"
 dependencies = [
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.32.0",
@@ -18,12 +18,18 @@ dependencies = [
     "pydantic>=2.0.0",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
     "pytest>=8.0.0",
     "httpx>=0.27.0",
     "mypy>=1.10.0",
 ]
+
+[tool.uv]
+default-groups = ["dev"]
+# The lockfile is universal. Require a resolution that also installs on Intel Macs
+# (some wheels, e.g. onnxruntime, dropped macosx x86_64 in newer releases).
+required-environments = ["sys_platform == 'darwin' and platform_machine == 'x86_64'"]
 
 [tool.setuptools.packages.find]
 include = ["app*"]

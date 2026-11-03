@@ -12,20 +12,20 @@ Project rules: [PROJECT_RULES.md](PROJECT_RULES.md). Design: [DESIGN.md](DESIGN.
 
 ## Setup
 
-Python 3.11+.
+Python 3.11 to 3.14. Dependencies are managed with [uv](https://docs.astral.sh/uv/getting-started/installation/) and pinned in `uv.lock`.
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -e ".[dev]"
+uv sync                  # creates .venv from uv.lock (runtime + dev tools)
 cp .env.example .env
 # set OPENAI_API_KEY in .env
 ```
 
+Use `uv run <command>` to run anything inside the environment (or `source .venv/bin/activate`). To change dependencies, edit `pyproject.toml` and run `uv lock`.
+
 ## Run
 
 ```bash
-uvicorn app.main:create_app --factory --reload
+uv run uvicorn app.main:create_app --factory --reload
 ```
 
 The app is built by a factory, so importing `app.main` has no side effects (no `data/` created).
@@ -52,6 +52,6 @@ curl -s -X POST http://127.0.0.1:8000/query \
 Tests mock OpenAI (hash embeddings + fake generator). They never call the live API.
 
 ```bash
-pytest
-mypy          # strict type check (required by PROJECT_RULES.md)
+uv run pytest
+uv run mypy          # strict type check (required by PROJECT_RULES.md)
 ```

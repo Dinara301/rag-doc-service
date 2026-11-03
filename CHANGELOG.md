@@ -16,6 +16,9 @@ Every commit that changes behavior, configuration, tooling, or documentation add
 - Project rules ([ADR-0002](docs/adr/0002-relax-dependency-and-infrastructure-rules.md)): prefer maintained libraries over hand-written code; LangChain/LlamaIndex allowed per component with an ADR (the RAG pipeline stays explicit); Docker and a Chroma server container allowed; added a Process section (ADRs, one logical commit, CHANGELOG, commit format). Auth, rate limiting, and managed databases remain out of scope until deployment.
 - `DESIGN.md` non-goals and future work updated to match.
 - ADR conventions now ask for concise records (about 15 lines); the template is shorter.
+- Dependency management moved to [uv](https://docs.astral.sh/uv/) with a committed `uv.lock` ([ADR-0003](docs/adr/0003-use-uv-ruff-and-pre-commit.md)). Setup is now `uv sync`; dev tools moved to `[dependency-groups]`, so `pip install -e ".[dev]"` no longer applies.
+- `requires-python` is now `>=3.11,<3.15` so the universal lockfile resolves on Intel macOS (newer `onnxruntime` wheels are missing there).
+- Locked dependency versions are newer than the previous unpinned install (for example FastAPI 0.162, OpenAI SDK 3.42, pydantic 2.14); the test suite and `mypy --strict` pass with them.
 
 ## [0.1.0] - 2026-10-14
 
