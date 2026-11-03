@@ -66,4 +66,19 @@ uv run mypy                  # strict type check (required by PROJECT_RULES.md)
 uv run pytest
 ```
 
+Optional, but recommended: run the same checks (plus whitespace/YAML/TOML hooks) automatically on `git commit`:
+
+```bash
+uv run pre-commit install          # once per clone
+uv run pre-commit run --all-files  # run manually
+```
+
+Audit dependencies for known vulnerabilities (needs network):
+
+```bash
+uv run pip-audit
+```
+
+Known findings (2026-11-03): `chromadb 1.5.9` has 5 advisories with no fixed release yet (PYSEC-2026-311, -3813, -3814, -3815). They concern the Chroma HTTP server (remote model loading, RBAC/tenant checks). The current embedded mode with OpenAI embeddings does not expose them; when Chroma runs as a server (Plan 06), keep it on a private network and do not enable its auth providers or remote-code options.
+
 Ruff is configured in `pyproject.toml` (line length 100; rules E, F, I, B, UP, S, D with Google docstring style). Module docstrings (`D100`) are not required, matching `PROJECT_RULES.md`; `assert` is allowed in tests.

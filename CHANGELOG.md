@@ -12,6 +12,7 @@ Every commit that changes behavior, configuration, tooling, or documentation add
 - This changelog.
 
 - [ruff](https://docs.astral.sh/ruff/) for linting and formatting (rules E, F, I, B, UP, S, D with Google docstring style; line length 100), added to the dev group. The docstring rule is now machine-checked. `D100` (module docstrings) is ignored because the project rules do not require them; `assert` is allowed in tests.
+- [pre-commit](https://pre-commit.com/) config (whitespace/YAML/TOML hooks plus locked `ruff` and `mypy`) and [pip-audit](https://github.com/pypa/pip-audit) in the dev group. README documents usage and the currently unfixed `chromadb` advisories (server-side only).
 
 ### Changed
 
