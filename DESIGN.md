@@ -10,8 +10,8 @@ Operators need a small local REST API that ingests technical documentation (PDF,
 
 - UI or streaming responses
 - Authentication, multi-tenancy, or rate limiting
-- Docker, cloud vector databases, or extra infrastructure
-- LangChain, LlamaIndex, or other orchestration frameworks
+- Managed or hosted vector databases, and deployment infrastructure (TLS, gateway, orchestration). Docker packaging is allowed; deployment itself is a later stage
+- Framework-level RAG pipelines (LangChain, LlamaIndex). Individual maintained libraries are used where they replace hand-written code (see [ADR-0002](docs/adr/0002-relax-dependency-and-infrastructure-rules.md))
 - Re-ingest/versioning, OCR, or additional file types (HTML, DOCX)
 
 ## Components
@@ -138,5 +138,5 @@ The directory is created when the app is built (`create_app`), not on import, an
 
 - Additional file types, OCR, and re-ingest
 - Hybrid search and reranking
-- Auth, Docker, and a hosted vector DB
+- Authentication, rate limiting, deployment, and a managed or highly available vector store
 - Streaming answers

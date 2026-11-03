@@ -65,7 +65,7 @@ class ChromaVectorStore:
     """`VectorStore` backed by a local persistent ChromaDB collection using cosine distance."""
 
     def __init__(self, persist_path: Path, collection_name: str = "documents") -> None:
-        """Open (or create) the persistent Chroma store at `persist_path` with telemetry disabled."""
+        """Open or create the persistent Chroma store at `persist_path`, telemetry disabled."""
         persist_path.mkdir(parents=True, exist_ok=True)
         self._client = chromadb.PersistentClient(
             path=str(persist_path),

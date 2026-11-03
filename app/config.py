@@ -12,7 +12,7 @@ DEFAULT_CHROMA_PATH: Path = PROJECT_ROOT / "data" / "chroma"
 
 
 class Settings(BaseModel):
-    """Runtime configuration: OpenAI credentials and models, storage path, chunking and upload limits."""
+    """Runtime configuration: OpenAI key and models, storage path, chunking, upload limits."""
 
     openai_api_key: str = ""
     chat_model: str = CHAT_MODEL
