@@ -20,7 +20,7 @@ cp .env.example .env
 # set OPENAI_API_KEY in .env
 ```
 
-Use `uv run <command>` to run anything inside the environment (or `source .venv/bin/activate`). To change dependencies, edit `pyproject.toml` and run `uv lock`.
+Use `uv run <command>` to run anything inside the environment (or `source .venv/bin/activate`). To change dependencies use `uv add <pkg>` (or `uv add --dev <pkg>`), which updates `pyproject.toml` and `uv.lock` together; commit both.
 
 ## Run
 

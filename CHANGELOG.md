@@ -10,7 +10,6 @@ Every commit that changes behavior, configuration, tooling, or documentation add
 
 - Architecture Decision Records in `docs/adr/` (index, template, and ADR-0001).
 - This changelog.
-
 - [ruff](https://docs.astral.sh/ruff/) for linting and formatting (rules E, F, I, B, UP, S, D with Google docstring style; line length 100), added to the dev group. The docstring rule is now machine-checked. `D100` (module docstrings) is ignored because the project rules do not require them; `assert` is allowed in tests.
 - [pre-commit](https://pre-commit.com/) config (whitespace/YAML/TOML hooks plus locked `ruff` and `mypy`) and [pip-audit](https://github.com/pypa/pip-audit) in the dev group. README documents usage and the currently unfixed `chromadb` advisories (server-side only).
 
@@ -22,6 +21,7 @@ Every commit that changes behavior, configuration, tooling, or documentation add
 - Dependency management moved to [uv](https://docs.astral.sh/uv/) with a committed `uv.lock` ([ADR-0003](docs/adr/0003-use-uv-ruff-and-pre-commit.md)). Setup is now `uv sync`; dev tools moved to `[dependency-groups]`, so `pip install -e ".[dev]"` no longer applies.
 - `requires-python` is now `>=3.11,<3.14` so the universal lockfile resolves on Intel macOS (newer `onnxruntime` wheels are missing there).
 - Locked dependency versions are newer than the previous unpinned install (for example FastAPI 0.162, OpenAI SDK 3.42, pydantic 2.14); the test suite and `mypy --strict` pass with them.
+- README now documents `uv add` as the way to change dependencies.
 
 ### Fixed
 
