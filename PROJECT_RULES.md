@@ -30,5 +30,5 @@
 # Process
 
 - Record decisions that have real alternatives as ADRs in `docs/adr/` (see `docs/adr/README.md`), in the same change or the commit just before it.
-- Make one logical change per commit. Each commit updates tests, docs, and `CHANGELOG.md` (`[Unreleased]`), and leaves every configured check green (currently `pytest` and `mypy --strict`).
+- Make one logical change per commit. Each commit updates tests, docs, and `CHANGELOG.md` (`[Unreleased]`), and leaves every configured check green (currently `ruff check`, `ruff format --check`, `mypy --strict`, and `pytest`).
 - Use a Conventional Commits subject (`type(scope): summary`). Put `Why`, `What`, `Tests`, `Docs`, and (when relevant) `ADR` lines in the body.

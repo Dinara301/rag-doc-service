@@ -11,6 +11,8 @@ Every commit that changes behavior, configuration, tooling, or documentation add
 - Architecture Decision Records in `docs/adr/` (index, template, and ADR-0001).
 - This changelog.
 
+- [ruff](https://docs.astral.sh/ruff/) for linting and formatting (rules E, F, I, B, UP, S, D with Google docstring style; line length 100), added to the dev group. The docstring rule is now machine-checked. `D100` (module docstrings) is ignored because the project rules do not require them; `assert` is allowed in tests.
+
 ### Changed
 
 - Project rules ([ADR-0002](docs/adr/0002-relax-dependency-and-infrastructure-rules.md)): prefer maintained libraries over hand-written code; LangChain/LlamaIndex allowed per component with an ADR (the RAG pipeline stays explicit); Docker and a Chroma server container allowed; added a Process section (ADRs, one logical commit, CHANGELOG, commit format). Auth, rate limiting, and managed databases remain out of scope until deployment.
@@ -22,6 +24,7 @@ Every commit that changes behavior, configuration, tooling, or documentation add
 
 ### Fixed
 
+- Three docstring lines over 100 characters shortened (found by the new ruff config; no behavior change).
 - Python upper bound corrected from `<3.15` to `<3.14`. The first uv lock did not re-resolve, so it missed that Python 3.14 has no Intel-macOS `onnxruntime` wheel; `uv add`/`uv lock --upgrade` failed until the bound was lowered. No package versions changed.
 
 ## [0.1.0] - 2026-10-14

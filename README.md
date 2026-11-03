@@ -53,5 +53,17 @@ Tests mock OpenAI (hash embeddings + fake generator). They never call the live A
 
 ```bash
 uv run pytest
-uv run mypy          # strict type check (required by PROJECT_RULES.md)
 ```
+
+## Quality checks
+
+All of these must pass before every commit:
+
+```bash
+uv run ruff check            # lint (also enforces the docstring rule)
+uv run ruff format --check   # formatting; run `uv run ruff format` to fix
+uv run mypy                  # strict type check (required by PROJECT_RULES.md)
+uv run pytest
+```
+
+Ruff is configured in `pyproject.toml` (line length 100; rules E, F, I, B, UP, S, D with Google docstring style). Module docstrings (`D100`) are not required, matching `PROJECT_RULES.md`; `assert` is allowed in tests.
