@@ -45,6 +45,8 @@ uv run uvicorn app.main:create_app --factory --reload
 
 The app is built by a factory, so importing `app.main` has no side effects (no `data/` created).
 
+Health endpoints: `GET /health/live` (alias `/health`) answers 200 while the process is up and never checks dependencies; `GET /health/ready` answers 200 when the API key is set and the vector store responds, otherwise 503 with a list of `reasons`. Use live for restarts and ready for traffic routing.
+
 ## Example
 
 Upload:

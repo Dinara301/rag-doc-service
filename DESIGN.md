@@ -81,7 +81,8 @@ The API always attaches `sources` from retrieval (not from the model’s prose).
 
 | Method | Path | Success | Errors |
 | --- | --- | --- | --- |
-| `GET` | `/health` | `200` `{ "status": "ok" }` | — |
+| `GET` | `/health/live` (alias `/health`) | `200` `{ "status": "ok" }`; never checks dependencies | — |
+| `GET` | `/health/ready` | `200` `{ "status": "ready", "reasons": [] }` | `503` `{ "status": "not_ready", "reasons": [...] }` when the API key is missing or the vector store does not answer a ping |
 | `POST` | `/documents` | `200` ingest summary | `400` unsupported type, empty, or too large; `502` OpenAI failure |
 | `GET` | `/documents` | `200` list of `{ document_id, filename, chunk_count }` | — |
 | `DELETE` | `/documents/{document_id}` | `204` | `404` unknown id |

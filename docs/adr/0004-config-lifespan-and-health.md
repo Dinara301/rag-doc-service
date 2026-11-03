@@ -14,7 +14,7 @@ Settings were loaded by hand (`python-dotenv` plus `os.getenv`) with the API key
 
 ## Decision
 
-Use `pydantic-settings` `BaseSettings` with `SecretStr` for the API key. A missing key does not crash startup; readiness reports it (added with the health endpoints).
+Use `pydantic-settings` `BaseSettings` with `SecretStr` for the API key. A missing key does not crash startup; readiness reports it. `/health/live` never checks dependencies (so a dependency blip does not restart the instance); `/health/ready` returns 503 with reasons when the key is missing or the store ping fails. `/health` stays as an alias of live.
 
 ## Consequences
 

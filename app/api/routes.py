@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, File, HTTPException, Response, UploadFile, status
 
 from app.api.schemas import (
     DocumentListResponse,
@@ -10,6 +10,7 @@ from app.api.schemas import (
     IngestResponse,
     QueryRequest,
     QueryResponse,
+    ReadinessResponse,
     Source,
 )
 from app.dependencies import OpenAIServicesDep, ServicesDep
@@ -21,10 +22,36 @@ router = APIRouter()
 _ERROR = {"model": ErrorResponse}
 
 
-@router.get("/health", response_model=HealthResponse)
+@router.get("/health", response_model=HealthResponse, summary="Liveness (alias)")
+@router.get("/health/live", response_model=HealthResponse, summary="Liveness")
 def health() -> HealthResponse:
-    """Liveness check; always returns `{"status": "ok"}` while the process is up."""
+    """Liveness check; never touches dependencies and returns `{"status": "ok"}` while up.
+
+    `/health` is kept as an alias of `/health/live` for backward compatibility.
+    """
     return HealthResponse(status="ok")
+
+
+@router.get(
+    "/health/ready",
+    response_model=ReadinessResponse,
+    responses={503: {"model": ReadinessResponse}},
+    summary="Readiness",
+)
+def ready(services: ServicesDep, response: Response) -> ReadinessResponse:
+    """Readiness check: 200 when the service can do real work, else 503 with reasons.
+
+    Not ready when the OpenAI API key is missing or the vector store does not answer a ping.
+    """
+    reasons: list[str] = []
+    if not services.settings.openai_configured:
+        reasons.append("OPENAI_API_KEY is not configured")
+    if not services.vector_store.ping():
+        reasons.append("vector store is unreachable")
+    if reasons:
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+        return ReadinessResponse(status="not_ready", reasons=reasons)
+    return ReadinessResponse(status="ready")
 
 
 @router.post(
