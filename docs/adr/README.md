@@ -9,6 +9,7 @@ Write an ADR in the same change (or the commit just before it) whenever a choice
 ## Conventions
 
 - File name: `NNNN-short-title.md`, numbered in the order decisions are made. Numbers are never reused.
+- Keep ADRs concise: aim for about 15 lines. One or two sentences per section, options as one-line bullets with the deciding trade-off, no repeated background. If it needs more, link to code or docs instead of pasting them.
 - Status is one of: `Proposed`, `Accepted`, `Superseded by NNNN`, `Rejected`.
 - Accepted ADRs are not rewritten. If a decision changes, add a new ADR and mark the old one `Superseded by NNNN`.
 - Link the ADR from the commit body (`ADR: docs/adr/NNNN-...`) and mention it in `CHANGELOG.md` when the decision changes behavior.
@@ -25,20 +26,20 @@ Copy this into a new file:
 
 ## Context
 
-What problem or constraint forces a decision? Include facts, not opinions.
+One or two sentences: the problem or constraint, as facts.
 
-## Options considered
+## Options
 
-1. Option A: pros, cons.
-2. Option B: pros, cons.
+- A: key pro / key con.
+- B: key pro / key con.
 
 ## Decision
 
-What we chose and the main reason.
+What we chose and the main reason, in a sentence or two.
 
 ## Consequences
 
-What becomes easier, what becomes harder, what we must do or watch as a result.
+Two or three bullets: what gets easier, harder, or must be watched.
 ```
 
 ## Index
