@@ -44,3 +44,4 @@ What becomes easier, what becomes harder, what we must do or watch as a result.
 ## Index
 
 - [0001. Adopt ADRs and a changelog](0001-adopt-adrs-and-changelog.md) - Accepted
+- [0002. Relax dependency and infrastructure rules](0002-relax-dependency-and-infrastructure-rules.md) - Accepted

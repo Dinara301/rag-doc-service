@@ -15,12 +15,19 @@
 
 # RAG & Dependencies
 
-- DO NOT use LangChain or LlamaIndex. Write clean, explicit RAG pipelines using native OpenAI SDK and ChromaDB SDK directly.
+- Prefer well-maintained libraries over hand-written code for solved problems (configuration, retries, text splitting, logging, metrics). Write custom code only when no library fits or a library would hide behavior we need to control, and say why in the commit or an ADR.
+- LangChain, LlamaIndex, and similar frameworks are allowed only for a specific component, and only when an ADR shows the benefit over a focused library. The RAG pipeline itself stays explicit: native OpenAI SDK and ChromaDB client, behind the `Embedder`, `AnswerGenerator`, and `VectorStore` protocols.
 - Use `gpt-4o-mini` for LLM generation and `text-embedding-3-small` for embeddings.
-- Vector DB: Use local persistent ChromaDB stored at `data/chroma/`.
+- Vector DB: ChromaDB, accessed only through `app/storage/`. It runs embedded (local `data/chroma/`) for development and tests, and as a separate Chroma server container (HTTP client) for production-like runs. Managed or hosted vector databases are out of scope.
 
 # Testing & Code Quality
 
 - All tests must use `pytest` and `httpx`.
 - Mock OpenAI calls in unit/integration tests (no live API calls during pytest).
-- Keep codebase minimalistic and self-contained for v1 (no Docker, no auth, no external DBs yet).
+- Keep the codebase minimal. Docker images and compose files are allowed. Authentication, rate limiting, and managed or hosted databases stay out of scope until the deployment stage.
+
+# Process
+
+- Record decisions that have real alternatives as ADRs in `docs/adr/` (see `docs/adr/README.md`), in the same change or the commit just before it.
+- Make one logical change per commit. Each commit updates tests, docs, and `CHANGELOG.md` (`[Unreleased]`), and leaves every configured check green (currently `pytest` and `mypy --strict`).
+- Use a Conventional Commits subject (`type(scope): summary`). Put `Why`, `What`, `Tests`, `Docs`, and (when relevant) `ADR` lines in the body.

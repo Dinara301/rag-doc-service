@@ -11,6 +11,11 @@ Every commit that changes behavior, configuration, tooling, or documentation add
 - Architecture Decision Records in `docs/adr/` (index, template, and ADR-0001).
 - This changelog.
 
+### Changed
+
+- Project rules ([ADR-0002](docs/adr/0002-relax-dependency-and-infrastructure-rules.md)): prefer maintained libraries over hand-written code; LangChain/LlamaIndex allowed per component with an ADR (the RAG pipeline stays explicit); Docker and a Chroma server container allowed; added a Process section (ADRs, one logical commit, CHANGELOG, commit format). Auth, rate limiting, and managed databases remain out of scope until deployment.
+- `DESIGN.md` non-goals and future work updated to match.
+
 ## [0.1.0] - 2026-10-14
 
 Initial version, before the production-readiness work.
