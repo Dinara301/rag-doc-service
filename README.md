@@ -12,7 +12,7 @@ Project rules: [PROJECT_RULES.md](PROJECT_RULES.md). Design: [DESIGN.md](DESIGN.
 
 ## Setup
 
-Python 3.11 to 3.14. Dependencies are managed with [uv](https://docs.astral.sh/uv/getting-started/installation/) and pinned in `uv.lock`.
+Python 3.11 to 3.13. Dependencies are managed with [uv](https://docs.astral.sh/uv/getting-started/installation/) and pinned in `uv.lock`.
 
 ```bash
 uv sync                  # creates .venv from uv.lock (runtime + dev tools)

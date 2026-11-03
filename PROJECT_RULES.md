@@ -1,6 +1,6 @@
 # General Project Rules
 
-- Python 3.11+ (currently capped below 3.15 by dependency wheel availability, see ADR-0003), strict type annotations everywhere.
+- Python 3.11+ (currently capped below 3.14 by dependency wheel availability, see ADR-0003), strict type annotations everywhere.
 - Manage dependencies with `uv`; commit `uv.lock` and update it with every dependency change.
 - Use FastAPI with Pydantic v2 for request/response validation.
 - Follow Clean Architecture: Keep API routes thin (thin controllers), put business/RAG logic in `app/rag/`, and storage abstraction in `app/storage/`.

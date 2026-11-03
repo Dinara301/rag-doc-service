@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "doc-qa-api"
 version = "0.1.0"
 description = "REST API RAG service for question answering over uploaded tech docs."
-requires-python = ">=3.11,<3.15"
+requires-python = ">=3.11,<3.14"
 dependencies = [
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.32.0",

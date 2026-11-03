@@ -20,5 +20,5 @@ Adopt `uv` with a committed `uv.lock`, `ruff` (including pydocstyle rules), and 
 ## Consequences
 
 - The lock is universal, so it must resolve for every platform in use. It requires Intel macOS (`required-environments`), where newer `onnxruntime` wheels are missing; the lock picks 1.23.2 there.
-- `requires-python` is now `>=3.11,<3.15`: without an upper bound, resolution also targets Python 3.15, which has no Intel-macOS wheel for `onnxruntime`. Raise the cap when wheels exist.
+- `requires-python` is now `>=3.11,<3.14`: without an upper bound, resolution also targets Python 3.14 and newer, which have no Intel-macOS wheel for `onnxruntime`. Raise the cap when wheels exist.
 - Dev tools move to `[dependency-groups]`; `pip install -e ".[dev]"` is replaced by `uv sync`.

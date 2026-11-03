@@ -17,8 +17,12 @@ Every commit that changes behavior, configuration, tooling, or documentation add
 - `DESIGN.md` non-goals and future work updated to match.
 - ADR conventions now ask for concise records (about 15 lines); the template is shorter.
 - Dependency management moved to [uv](https://docs.astral.sh/uv/) with a committed `uv.lock` ([ADR-0003](docs/adr/0003-use-uv-ruff-and-pre-commit.md)). Setup is now `uv sync`; dev tools moved to `[dependency-groups]`, so `pip install -e ".[dev]"` no longer applies.
-- `requires-python` is now `>=3.11,<3.15` so the universal lockfile resolves on Intel macOS (newer `onnxruntime` wheels are missing there).
+- `requires-python` is now `>=3.11,<3.14` so the universal lockfile resolves on Intel macOS (newer `onnxruntime` wheels are missing there).
 - Locked dependency versions are newer than the previous unpinned install (for example FastAPI 0.162, OpenAI SDK 3.42, pydantic 2.14); the test suite and `mypy --strict` pass with them.
+
+### Fixed
+
+- Python upper bound corrected from `<3.15` to `<3.14`. The first uv lock did not re-resolve, so it missed that Python 3.14 has no Intel-macOS `onnxruntime` wheel; `uv add`/`uv lock --upgrade` failed until the bound was lowered. No package versions changed.
 
 ## [0.1.0] - 2026-10-14
 
