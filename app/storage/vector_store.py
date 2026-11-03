@@ -61,6 +61,9 @@ class VectorStore(Protocol):
     def delete_document(self, document_id: str) -> bool:
         """Delete all chunks of a document; return False if the document does not exist."""
 
+    def ping(self) -> bool:
+        """Return True if the store is reachable and can serve requests; never raises."""
+
     def close(self) -> None:
         """Release the store's resources; called once on application shutdown."""
 
@@ -154,6 +157,14 @@ class ChromaVectorStore:
         if not ids:
             return False
         self._collection.delete(ids=ids)
+        return True
+
+    def ping(self) -> bool:
+        """Return True if the Chroma heartbeat succeeds; any error counts as unreachable."""
+        try:
+            self._client.heartbeat()
+        except Exception:
+            return False
         return True
 
     def close(self) -> None:

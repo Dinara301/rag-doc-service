@@ -34,7 +34,7 @@ flowchart LR
 | --- | --- | --- |
 | HTTP | `app/api/` | Parse requests, call use-cases, return Pydantic models |
 | RAG | `app/rag/` | Load, chunk, embed, retrieve, prompt, generate |
-| Storage | `app/storage/` | Persist and query chunks; Chroma is hidden behind this |
+| Storage | `app/storage/` | Persist and query chunks (`VectorStore`: add, query, list, delete, `ping` for readiness, `close`); Chroma is hidden behind this |
 
 `app/config.py` holds model names (`gpt-4o-mini`, `text-embedding-3-small`), chunk sizes, and paths.
 

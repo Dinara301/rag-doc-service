@@ -38,6 +38,10 @@ class RecordingStore:
         """Report the document as missing."""
         return False
 
+    def ping(self) -> bool:
+        """Report the store as reachable."""
+        return True
+
     def close(self) -> None:
         """Record the shutdown."""
         self.closed = True
