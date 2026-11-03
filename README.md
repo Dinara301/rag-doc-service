@@ -4,6 +4,12 @@ REST API RAG service: upload tech docs (PDF, Markdown, TXT) and ask questions. A
 
 Project rules: [PROJECT_RULES.md](PROJECT_RULES.md). Design: [DESIGN.md](DESIGN.md).
 
+## Decisions and changes
+
+- Decisions with real alternatives are recorded as ADRs in [docs/adr](docs/adr/README.md).
+- Every change is listed in [CHANGELOG.md](CHANGELOG.md).
+- Commit messages follow Conventional Commits and carry `Why`, `What`, `Tests`, `Docs`, and (when relevant) `ADR` lines in the body.
+
 ## Setup
 
 Python 3.11+.
