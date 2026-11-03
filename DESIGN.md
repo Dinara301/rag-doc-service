@@ -38,6 +38,10 @@ flowchart LR
 
 `app/config.py` holds model names (`gpt-4o-mini`, `text-embedding-3-small`), chunk sizes, and paths.
 
+## Application lifecycle
+
+`create_app` reads `Settings` and registers a FastAPI `lifespan` ([ADR-0004](docs/adr/0004-config-lifespan-and-health.md)). On startup the lifespan builds the vector store and OpenAI client and publishes them as `app.state.services`; on shutdown it closes the OpenAI client and the vector store (`VectorStore.close()`) and removes the services, even if the app stops with an error. Tests inject fakes through `create_app(...)`; the app takes ownership of an injected store and closes it too. Services exist only while the app is running, so tests use `with TestClient(app)`.
+
 ## Request lifecycle
 
 **Ingest (`POST /documents`)**
