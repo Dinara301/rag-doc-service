@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 from fastapi import FastAPI
 from openai import OpenAIError
+from pydantic import SecretStr
 
 from app.config import Settings
 from app.main import create_app
@@ -56,7 +57,7 @@ def make_app(tmp_path: Path) -> AppFactory:
 
     def _make(*, api_key: str = "test-key", embedder: Embedder | None = None) -> FastAPI:
         """Create an app; `api_key` and `embedder` can be overridden per test."""
-        settings = Settings(openai_api_key=api_key, chroma_path=tmp_path / "chroma")
+        settings = Settings(openai_api_key=SecretStr(api_key), chroma_path=tmp_path / "chroma")
         return create_app(
             settings,
             embedder=embedder or HashEmbedder(),

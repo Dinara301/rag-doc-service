@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -5,6 +7,13 @@ class HealthResponse(BaseModel):
     """Liveness probe payload."""
 
     status: str
+
+
+class ReadinessResponse(BaseModel):
+    """Readiness probe payload; `reasons` lists what is missing when not ready."""
+
+    status: Literal["ready", "not_ready"]
+    reasons: list[str] = Field(default_factory=list)
 
 
 class DocumentSummary(BaseModel):

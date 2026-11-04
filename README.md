@@ -22,6 +22,21 @@ cp .env.example .env
 
 Use `uv run <command>` to run anything inside the environment (or `source .venv/bin/activate`). To change dependencies use `uv add <pkg>` (or `uv add --dev <pkg>`), which updates `pyproject.toml` and `uv.lock` together; commit both.
 
+## Configuration
+
+Settings come from environment variables or a local `.env` file ([pydantic-settings](https://docs.pydantic.dev/latest/concepts/pydantic_settings/), [ADR-0004](docs/adr/0004-config-lifespan-and-health.md)). Invalid values stop startup with a validation error; the API key is never printed.
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `OPENAI_API_KEY` | empty | Required for ingest and query (503 without it) |
+| `CHAT_MODEL` | `gpt-4o-mini` | Answer model |
+| `EMBEDDING_MODEL` | `text-embedding-3-small` | Embedding model |
+| `CHROMA_PATH` | `data/chroma` | Embedded Chroma directory |
+| `CHUNK_SIZE_TOKENS` | `800` | Approximate chunk size |
+| `CHUNK_OVERLAP_TOKENS` | `150` | Approximate chunk overlap |
+| `MAX_FILE_BYTES` | `10485760` | Per-file upload limit |
+| `ALLOWED_EXTENSIONS` | `[".pdf", ".md", ".markdown", ".txt"]` (JSON list) | Accepted file types |
+
 ## Run
 
 ```bash
@@ -29,6 +44,8 @@ uv run uvicorn app.main:create_app --factory --reload
 ```
 
 The app is built by a factory, so importing `app.main` has no side effects (no `data/` created).
+
+Health endpoints: `GET /health/live` (alias `/health`) answers 200 while the process is up and never checks dependencies; `GET /health/ready` answers 200 when the API key is set and the vector store responds, otherwise 503 with a list of `reasons`. Use live for restarts and ready for traffic routing.
 
 ## Example
 

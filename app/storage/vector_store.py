@@ -2,9 +2,10 @@ from collections import Counter
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Protocol
+from typing import Protocol, cast
 
 import chromadb
+from chromadb.api.client import Client
 from chromadb.config import Settings as ChromaSettings
 
 
@@ -60,6 +61,12 @@ class VectorStore(Protocol):
     def delete_document(self, document_id: str) -> bool:
         """Delete all chunks of a document; return False if the document does not exist."""
 
+    def ping(self) -> bool:
+        """Return True if the store is reachable and can serve requests; never raises."""
+
+    def close(self) -> None:
+        """Release the store's resources; called once on application shutdown."""
+
 
 class ChromaVectorStore:
     """`VectorStore` backed by a local persistent ChromaDB collection using cosine distance."""
@@ -67,9 +74,13 @@ class ChromaVectorStore:
     def __init__(self, persist_path: Path, collection_name: str = "documents") -> None:
         """Open or create the persistent Chroma store at `persist_path`, telemetry disabled."""
         persist_path.mkdir(parents=True, exist_ok=True)
-        self._client = chromadb.PersistentClient(
-            path=str(persist_path),
-            settings=ChromaSettings(anonymized_telemetry=False),
+        # PersistentClient is typed as ClientAPI, which omits close(); the concrete Client has it.
+        self._client = cast(
+            "Client",
+            chromadb.PersistentClient(
+                path=str(persist_path),
+                settings=ChromaSettings(anonymized_telemetry=False),
+            ),
         )
         self._collection = self._client.get_or_create_collection(
             name=collection_name,
@@ -147,3 +158,15 @@ class ChromaVectorStore:
             return False
         self._collection.delete(ids=ids)
         return True
+
+    def ping(self) -> bool:
+        """Return True if the Chroma heartbeat succeeds; any error counts as unreachable."""
+        try:
+            self._client.heartbeat()
+        except Exception:
+            return False
+        return True
+
+    def close(self) -> None:
+        """Close the underlying Chroma client and release its file handles."""
+        self._client.close()

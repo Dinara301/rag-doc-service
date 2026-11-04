@@ -34,9 +34,13 @@ flowchart LR
 | --- | --- | --- |
 | HTTP | `app/api/` | Parse requests, call use-cases, return Pydantic models |
 | RAG | `app/rag/` | Load, chunk, embed, retrieve, prompt, generate |
-| Storage | `app/storage/` | Persist and query chunks; Chroma is hidden behind this |
+| Storage | `app/storage/` | Persist and query chunks (`VectorStore`: add, query, list, delete, `ping` for readiness, `close`); Chroma is hidden behind this |
 
 `app/config.py` holds model names (`gpt-4o-mini`, `text-embedding-3-small`), chunk sizes, and paths.
+
+## Application lifecycle
+
+`create_app` reads `Settings` and registers a FastAPI `lifespan` ([ADR-0004](docs/adr/0004-config-lifespan-and-health.md)). On startup the lifespan builds the vector store and OpenAI client and publishes them as `app.state.services`; on shutdown it closes the OpenAI client and the vector store (`VectorStore.close()`) and removes the services, even if the app stops with an error. Tests inject fakes through `create_app(...)`; the app takes ownership of an injected store and closes it too. Services exist only while the app is running, so tests use `with TestClient(app)`.
 
 ## Request lifecycle
 
@@ -77,7 +81,8 @@ The API always attaches `sources` from retrieval (not from the model’s prose).
 
 | Method | Path | Success | Errors |
 | --- | --- | --- | --- |
-| `GET` | `/health` | `200` `{ "status": "ok" }` | — |
+| `GET` | `/health/live` (alias `/health`) | `200` `{ "status": "ok" }`; never checks dependencies | — |
+| `GET` | `/health/ready` | `200` `{ "status": "ready", "reasons": [] }` | `503` `{ "status": "not_ready", "reasons": [...] }` when the API key is missing or the vector store does not answer a ping |
 | `POST` | `/documents` | `200` ingest summary | `400` unsupported type, empty, or too large; `502` OpenAI failure |
 | `GET` | `/documents` | `200` list of `{ document_id, filename, chunk_count }` | — |
 | `DELETE` | `/documents/{document_id}` | `204` | `404` unknown id |
@@ -126,7 +131,7 @@ The directory is created when the app is built (`create_app`), not on import, an
 | No documents / no hits | `200` + empty sources |
 | Unknown `document_id` on delete | `404` |
 | OpenAI HTTP/SDK error | `502` |
-| Missing `OPENAI_API_KEY` at runtime | `503` on ingest/query |
+| Missing `OPENAI_API_KEY` at runtime | `503` on ingest/query; `/health/ready` reports not ready, `/health/live` stays `200` |
 
 ## Security (v1)
 
