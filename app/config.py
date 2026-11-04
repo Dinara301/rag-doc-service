@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Literal
 
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -27,6 +28,8 @@ class Settings(BaseSettings):
     chunk_overlap_tokens: int = Field(default=150, ge=0)
     max_file_bytes: int = Field(default=10 * 1024 * 1024, gt=0)
     allowed_extensions: frozenset[str] = frozenset({".pdf", ".md", ".markdown", ".txt"})
+    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
+    log_json: bool = True
 
     @property
     def openai_configured(self) -> bool:

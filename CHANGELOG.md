@@ -8,6 +8,7 @@ Every commit that changes behavior, configuration, tooling, or documentation add
 
 ### Added
 
+- Structured JSON logging with [structlog](https://www.structlog.org/): stdlib and uvicorn logs share one format; `LOG_LEVEL` and `LOG_JSON` settings; `app_started`, `app_stopping`, `documents_ingested` and `query_answered` events that carry counts only. ADR-0005 (logging part).
 - Architecture Decision Records in `docs/adr/` (index, template, and ADR-0001).
 - This changelog.
 - [ruff](https://docs.astral.sh/ruff/) for linting and formatting (rules E, F, I, B, UP, S, D with Google docstring style; line length 100), added to the dev group. The docstring rule is now machine-checked. `D100` (module docstrings) is ignored because the project rules do not require them; `assert` is allowed in tests.

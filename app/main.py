@@ -1,6 +1,7 @@
 from collections.abc import AsyncIterator
 from contextlib import AsyncExitStack, asynccontextmanager
 
+import structlog
 from fastapi import FastAPI
 from openai import OpenAI
 
@@ -8,12 +9,15 @@ from app.api.errors import register_exception_handlers
 from app.api.routes import router
 from app.config import Settings
 from app.dependencies import AppServices
+from app.logging_config import configure_logging
 from app.rag.llm import AnswerGenerator, Embedder, OpenAIAnswerGenerator, OpenAIEmbedder
 from app.storage.vector_store import ChromaVectorStore, VectorStore
 
 # Placeholder so the app can start (and serve /health, /documents) without a key;
 # OpenAI-backed routes return 503 until OPENAI_API_KEY is configured.
 _UNCONFIGURED_API_KEY: str = "unconfigured"
+
+log = structlog.get_logger(__name__)
 
 
 def create_app(
@@ -34,6 +38,7 @@ def create_app(
     Run with: ``uvicorn app.main:create_app --factory --reload``
     """
     resolved = settings or Settings()
+    configure_logging(resolved.log_level, json_logs=resolved.log_json)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -61,7 +66,14 @@ def create_app(
                 embedder=resolved_embedder,
                 generator=resolved_generator,
             )
+            log.info(
+                "app_started",
+                chat_model=resolved.chat_model,
+                embedding_model=resolved.embedding_model,
+                openai_configured=resolved.openai_configured,
+            )
             yield
+            log.info("app_stopping")
             del app.state.services
 
     app = FastAPI(title="doc-qa-api", version="0.1.0", lifespan=lifespan)

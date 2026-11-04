@@ -1,5 +1,6 @@
 from typing import Annotated
 
+import structlog
 from fastapi import APIRouter, File, HTTPException, Response, UploadFile, status
 
 from app.api.schemas import (
@@ -18,6 +19,7 @@ from app.rag.ingest import IncomingFile, ingest_documents
 from app.rag.qa import answer_question
 
 router = APIRouter()
+log = structlog.get_logger(__name__)
 
 _ERROR = {"model": ErrorResponse}
 
@@ -79,6 +81,11 @@ def upload_documents(
         embedder=services.embedder,
         vector_store=services.vector_store,
     )
+    log.info(
+        "documents_ingested",
+        document_count=len(records),
+        chunk_count=sum(record.chunk_count for record in records),
+    )
     return IngestResponse(documents=[DocumentSummary.model_validate(r) for r in records])
 
 
@@ -114,6 +121,7 @@ def query_documents(body: QueryRequest, services: OpenAIServicesDep) -> QueryRes
         generator=services.generator,
         vector_store=services.vector_store,
     )
+    log.info("query_answered", top_k=body.top_k, source_count=len(result.sources))
     return QueryResponse(
         answer=result.answer,
         sources=[
