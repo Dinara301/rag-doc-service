@@ -15,7 +15,7 @@ The service had no application logs and no way to follow a request across log li
 
 ## Decision
 
-Use `structlog` with JSON output on stdout. Log counts and ids only. Request IDs use `asgi-correlation-id` with its default validator (dashed UUID or 32-hex, which covers nginx and OpenTelemetry IDs); other inbound values are replaced. A structlog processor adds `request_id` to every record, including uvicorn's access line (verified on a running server). Metrics are appended as step 3.3 lands.
+Use `structlog` with JSON output on stdout. Log counts and ids only. Request IDs use `asgi-correlation-id` with its default validator (dashed UUID or 32-hex, which covers nginx and OpenTelemetry IDs); other inbound values are replaced. A structlog processor adds `request_id` to every record, including uvicorn's access line (verified on a running server). Metrics use `prometheus-fastapi-instrumentator` at `GET /metrics` (hidden from OpenAPI, `METRICS_ENABLED` setting, probes and scrapes excluded). Each app gets its own `CollectorRegistry` so several apps can share a process. Per-route latency buckets are widened to 30s for OpenAI-backed routes; the in-progress gauge is not used because the library registers it globally.
 
 ## Consequences
 

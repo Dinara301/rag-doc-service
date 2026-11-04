@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     allowed_extensions: frozenset[str] = frozenset({".pdf", ".md", ".markdown", ".txt"})
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
     log_json: bool = True
+    metrics_enabled: bool = True
 
     @property
     def openai_configured(self) -> bool:

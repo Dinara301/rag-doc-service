@@ -11,6 +11,7 @@ from app.api.routes import router
 from app.config import Settings
 from app.dependencies import AppServices
 from app.logging_config import configure_logging
+from app.metrics import setup_metrics
 from app.rag.llm import AnswerGenerator, Embedder, OpenAIAnswerGenerator, OpenAIEmbedder
 from app.storage.vector_store import ChromaVectorStore, VectorStore
 
@@ -82,6 +83,8 @@ def create_app(
 
     app = FastAPI(title="doc-qa-api", version="0.1.0", lifespan=lifespan)
     app.add_middleware(CorrelationIdMiddleware, header_name=REQUEST_ID_HEADER)
+    if resolved.metrics_enabled:
+        setup_metrics(app)
     app.include_router(router)
     register_exception_handlers(app)
     return app
