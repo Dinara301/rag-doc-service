@@ -21,7 +21,6 @@ _UNCONFIGURED_API_KEY: str = "unconfigured"
 
 REQUEST_ID_HEADER: str = "X-Request-ID"
 
-
 log = structlog.get_logger(__name__)
 
 
