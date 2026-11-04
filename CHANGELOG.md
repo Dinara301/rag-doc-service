@@ -8,6 +8,9 @@ Every commit that changes behavior, configuration, tooling, or documentation add
 
 ### Added
 
+- Prometheus metrics at `GET /metrics` ([prometheus-fastapi-instrumentator](https://github.com/trallnag/prometheus-fastapi-instrumentator)): request counts and latency per route template; `METRICS_ENABLED` setting; health probes and `/metrics` excluded; Python runtime metrics and, on Linux, process CPU/memory/file-descriptor metrics. ADR-0005 (metrics part).
+- Request correlation IDs ([asgi-correlation-id](https://github.com/snok/asgi-correlation-id)): every response has `X-Request-ID` (inbound UUIDs are kept) and every log line during a request carries `request_id`.
+- Structured JSON logging with [structlog](https://www.structlog.org/): stdlib and uvicorn logs share one format; `LOG_LEVEL` and `LOG_JSON` settings; `app_started`, `app_stopping`, `documents_ingested` and `query_answered` events that carry counts only. ADR-0005 (logging part).
 - Architecture Decision Records in `docs/adr/` (index, template, and ADR-0001).
 - This changelog.
 - [ruff](https://docs.astral.sh/ruff/) for linting and formatting (rules E, F, I, B, UP, S, D with Google docstring style; line length 100), added to the dev group. The docstring rule is now machine-checked. `D100` (module docstrings) is ignored because the project rules do not require them; `assert` is allowed in tests.

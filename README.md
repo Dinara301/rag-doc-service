@@ -35,6 +35,9 @@ Settings come from environment variables or a local `.env` file ([pydantic-setti
 | `CHUNK_SIZE_TOKENS` | `800` | Approximate chunk size |
 | `CHUNK_OVERLAP_TOKENS` | `150` | Approximate chunk overlap |
 | `MAX_FILE_BYTES` | `10485760` | Per-file upload limit |
+| `LOG_LEVEL` | `INFO` | `DEBUG`, `INFO`, `WARNING`, `ERROR` or `CRITICAL` |
+| `LOG_JSON` | `true` | JSON lines on stdout; `false` for readable console output in development |
+| `METRICS_ENABLED` | `true` | Expose Prometheus metrics at `/metrics` |
 | `ALLOWED_EXTENSIONS` | `[".pdf", ".md", ".markdown", ".txt"]` (JSON list) | Accepted file types |
 
 ## Run
@@ -46,6 +49,18 @@ uv run uvicorn app.main:create_app --factory --reload
 The app is built by a factory, so importing `app.main` has no side effects (no `data/` created).
 
 Health endpoints: `GET /health/live` (alias `/health`) answers 200 while the process is up and never checks dependencies; `GET /health/ready` answers 200 when the API key is set and the vector store responds, otherwise 503 with a list of `reasons`. Use live for restarts and ready for traffic routing.
+
+## Logging
+
+Logs are written to stdout as one JSON object per line (`timestamp`, `level`, `logger`, `event`, plus fields). Our logs, stdlib logs and uvicorn's logs share this format ([ADR-0005](docs/adr/0005-observability-stack.md)). Set `LOG_JSON=false` for readable output while developing. The service logs counts and ids only (for example `documents_ingested` with `document_count` and `chunk_count`); API keys, file contents, filenames and questions are never logged.
+
+Every response carries an `X-Request-ID` header, and every log line written during that request has the same `request_id`. Send your own `X-Request-ID` (a UUID, dashed or 32-hex) to trace a call across services; anything else is replaced with a generated ID.
+
+## Operations
+
+`GET /metrics` serves Prometheus metrics ([ADR-0005](docs/adr/0005-observability-stack.md)); set `METRICS_ENABLED=false` to turn it off. Main series: `http_requests_total{handler,method,status}` (status grouped as `2xx`, `4xx`, `5xx`), `http_request_duration_seconds{handler,method}` (buckets up to 30s) request/response size summaries, and runtime metrics (`python_gc_*`, `python_info`, plus `process_*` CPU, memory and file descriptors on Linux). `handler` is the route template, for example `/documents/{document_id}`, so label cardinality stays bounded. Health probes and `/metrics` are not counted.
+
+`/metrics` has no authentication: expose it only on a private network. Counters are per instance, so scrape every replica.
 
 ## Example
 
