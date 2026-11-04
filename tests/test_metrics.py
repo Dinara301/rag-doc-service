@@ -47,6 +47,18 @@ def test_metrics_endpoint_is_hidden_from_the_openapi_schema(app: FastAPI) -> Non
     assert "/documents" in paths
 
 
+def test_runtime_and_process_metrics_are_exposed(app: FastAPI) -> None:
+    """The custom registry still reports Python runtime and (on Linux) process metrics."""
+    with client_for(app) as client:
+        body = client.get("/metrics").text
+
+    assert "python_gc_objects_collected_total" in body
+    assert "python_info" in body
+    if Path("/proc/self").exists():
+        assert "process_resident_memory_bytes" in body
+        assert "process_cpu_seconds_total" in body
+
+
 def test_each_app_has_its_own_metrics(make_app: AppFactory) -> None:
     """Two apps in one process do not share counters or clash on registration."""
     busy, idle = make_app(), make_app()

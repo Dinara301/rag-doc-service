@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from prometheus_client import CollectorRegistry
+from prometheus_client import CollectorRegistry, GCCollector, PlatformCollector, ProcessCollector
 from prometheus_fastapi_instrumentator import Instrumentator
 
 # Per-route latency buckets (seconds). The library default stops at 1s, which cannot show the
@@ -19,9 +19,17 @@ def setup_metrics(app: FastAPI) -> None:
     (`/documents/{document_id}`), never the raw URL, which keeps label cardinality bounded.
     The endpoint is hidden from the OpenAPI schema and is unauthenticated: keep it on a
     private network.
+
+    A custom registry does not include the default process collectors, so they are added here:
+    garbage collection and Python/platform info everywhere, and CPU, memory and open file
+    descriptors where `/proc` exists (Linux, which includes containers).
     """
+    registry = CollectorRegistry()
+    GCCollector(registry=registry)
+    PlatformCollector(registry=registry)
+    ProcessCollector(registry=registry)
     instrumentator = Instrumentator(
-        registry=CollectorRegistry(),
+        registry=registry,
         excluded_handlers=_EXCLUDED_HANDLERS,
     )
     instrumentator.instrument(app, latency_lowr_buckets=_ROUTE_LATENCY_BUCKETS).expose(

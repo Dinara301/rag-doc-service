@@ -58,7 +58,7 @@ Every response carries an `X-Request-ID` header, and every log line written duri
 
 ## Operations
 
-`GET /metrics` serves Prometheus metrics ([ADR-0005](docs/adr/0005-observability-stack.md)); set `METRICS_ENABLED=false` to turn it off. Main series: `http_requests_total{handler,method,status}` (status grouped as `2xx`, `4xx`, `5xx`), `http_request_duration_seconds{handler,method}` (buckets up to 30s) and request/response size summaries. `handler` is the route template, for example `/documents/{document_id}`, so label cardinality stays bounded. Health probes and `/metrics` are not counted.
+`GET /metrics` serves Prometheus metrics ([ADR-0005](docs/adr/0005-observability-stack.md)); set `METRICS_ENABLED=false` to turn it off. Main series: `http_requests_total{handler,method,status}` (status grouped as `2xx`, `4xx`, `5xx`), `http_request_duration_seconds{handler,method}` (buckets up to 30s) request/response size summaries, and runtime metrics (`python_gc_*`, `python_info`, plus `process_*` CPU, memory and file descriptors on Linux). `handler` is the route template, for example `/documents/{document_id}`, so label cardinality stays bounded. Health probes and `/metrics` are not counted.
 
 `/metrics` has no authentication: expose it only on a private network. Counters are per instance, so scrape every replica.
 
