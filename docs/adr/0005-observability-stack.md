@@ -15,7 +15,7 @@ The service had no application logs and no way to follow a request across log li
 
 ## Decision
 
-Use `structlog` with JSON output on stdout. Log counts and ids only. Request IDs and metrics decisions are appended to this ADR as steps 3.2 and 3.3 land.
+Use `structlog` with JSON output on stdout. Log counts and ids only. Request IDs use `asgi-correlation-id` with its default validator (dashed UUID or 32-hex, which covers nginx and OpenTelemetry IDs); other inbound values are replaced. A structlog processor adds `request_id` to every record, including uvicorn's access line (verified on a running server). Metrics are appended as step 3.3 lands.
 
 ## Consequences
 

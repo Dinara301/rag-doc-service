@@ -53,6 +53,8 @@ Health endpoints: `GET /health/live` (alias `/health`) answers 200 while the pro
 
 Logs are written to stdout as one JSON object per line (`timestamp`, `level`, `logger`, `event`, plus fields). Our logs, stdlib logs and uvicorn's logs share this format ([ADR-0005](docs/adr/0005-observability-stack.md)). Set `LOG_JSON=false` for readable output while developing. The service logs counts and ids only (for example `documents_ingested` with `document_count` and `chunk_count`); API keys, file contents, filenames and questions are never logged.
 
+Every response carries an `X-Request-ID` header, and every log line written during that request has the same `request_id`. Send your own `X-Request-ID` (a UUID, dashed or 32-hex) to trace a call across services; anything else is replaced with a generated ID.
+
 ## Example
 
 Upload:

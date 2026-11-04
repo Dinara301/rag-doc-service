@@ -2,6 +2,7 @@ from collections.abc import AsyncIterator
 from contextlib import AsyncExitStack, asynccontextmanager
 
 import structlog
+from asgi_correlation_id import CorrelationIdMiddleware
 from fastapi import FastAPI
 from openai import OpenAI
 
@@ -16,6 +17,9 @@ from app.storage.vector_store import ChromaVectorStore, VectorStore
 # Placeholder so the app can start (and serve /health, /documents) without a key;
 # OpenAI-backed routes return 503 until OPENAI_API_KEY is configured.
 _UNCONFIGURED_API_KEY: str = "unconfigured"
+
+REQUEST_ID_HEADER: str = "X-Request-ID"
+
 
 log = structlog.get_logger(__name__)
 
@@ -77,6 +81,7 @@ def create_app(
             del app.state.services
 
     app = FastAPI(title="doc-qa-api", version="0.1.0", lifespan=lifespan)
+    app.add_middleware(CorrelationIdMiddleware, header_name=REQUEST_ID_HEADER)
     app.include_router(router)
     register_exception_handlers(app)
     return app

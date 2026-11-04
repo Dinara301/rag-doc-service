@@ -2,9 +2,23 @@ import logging
 import sys
 
 import structlog
+from asgi_correlation_id import correlation_id
 
 _HANDLER_MARKER = "_doc_qa_handler"
 _UVICORN_LOGGERS = ("uvicorn", "uvicorn.error", "uvicorn.access")
+
+
+def add_request_id(
+    logger: object, method_name: str, event_dict: structlog.typing.EventDict
+) -> structlog.typing.EventDict:
+    """Structlog processor adding the current request's correlation ID as `request_id`.
+
+    Nothing is added outside a request (for example startup logs).
+    """
+    request_id = correlation_id.get()
+    if request_id:
+        event_dict["request_id"] = request_id
+    return event_dict
 
 
 def configure_logging(level: str = "INFO", *, json_logs: bool = True) -> None:
@@ -22,6 +36,7 @@ def configure_logging(level: str = "INFO", *, json_logs: bool = True) -> None:
         structlog.contextvars.merge_contextvars,
         structlog.stdlib.add_logger_name,
         structlog.stdlib.add_log_level,
+        add_request_id,
         structlog.processors.TimeStamper(fmt="iso", utc=True),
     ]
     structlog.configure(

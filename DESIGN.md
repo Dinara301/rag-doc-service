@@ -52,6 +52,8 @@ flowchart LR
 4. Upsert vectors and metadata (`document_id`, `filename`) into persistent Chroma at `data/chroma/`.
 5. Return document ids and chunk counts.
 
+Every request gets a correlation ID (`asgi-correlation-id` middleware): an inbound `X-Request-ID` UUID is kept, otherwise one is generated, and it is returned in the `X-Request-ID` response header. A structlog processor adds it as `request_id` to every log record written while the request is handled, including uvicorn's access line ([ADR-0005](docs/adr/0005-observability-stack.md)).
+
 Routes are synchronous (`def`), so FastAPI runs the blocking OpenAI/Chroma calls in its threadpool instead of the event loop. Domain errors are mapped to HTTP in one place (`app/api/errors.py`): `DocumentRejectedError` to 400, `OpenAIError` to 502.
 
 **Query (`POST /query`)**
