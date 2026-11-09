@@ -133,6 +133,8 @@ Decisions are in [ADR-0005](docs/adr/0005-observability-stack.md).
 
 ## Failure modes
 
+Error bodies are `ErrorResponse` (`detail`, `request_id`); `request_id` matches the `X-Request-ID` header. FastAPI's 422 validation body is unchanged.
+
 | Situation | Behavior |
 | --- | --- |
 | Unsupported extension | `400` |
@@ -145,6 +147,7 @@ Decisions are in [ADR-0005](docs/adr/0005-observability-stack.md).
 | OpenAI rejects our API key or permissions | `503` "Upstream service is misconfigured" (logged at error level) |
 | OpenAI timeout (after SDK retries) | `504` |
 | Other OpenAI error (connection, 4xx, 5xx) | `502` |
+| Any unexpected exception | `500` `"Internal server error"`; traceback (no locals) only in logs |
 | Missing `OPENAI_API_KEY` at runtime | `503` on ingest/query; `/health/ready` reports not ready, `/health/live` stays `200` |
 
 ## Security (v1)

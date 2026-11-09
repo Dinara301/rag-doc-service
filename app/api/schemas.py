@@ -62,6 +62,9 @@ class QueryResponse(BaseModel):
 
 
 class ErrorResponse(BaseModel):
-    """Error body returned for 4xx/5xx responses."""
+    """Error body returned for 4xx/5xx responses (FastAPI's 422 validation body is separate)."""
 
     detail: str
+    request_id: str | None = Field(
+        default=None, description="Correlation ID of the request; also sent as X-Request-ID."
+    )

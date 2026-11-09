@@ -23,6 +23,7 @@ Every commit that changes behavior, configuration, tooling, or documentation add
 
 ### Changed
 
+- Error bodies now include `request_id` (matches `X-Request-ID`), including `HTTPException` responses such as 404 and 503. Unexpected exceptions return a generic JSON `500` instead of a plain-text error; the traceback is logged only. FastAPI's 422 body is unchanged.
 - OpenAI failures map to precise status codes ([ADR-0006](docs/adr/0006-openai-error-mapping.md)): rate limit 503 with `Retry-After`, authentication/permission 503, timeout 504, other errors 502 (previously always 502). Upstream text is never returned; failures are logged as `openai_request_failed` with type and upstream status.
 - Services are now created in a FastAPI lifespan and closed on shutdown (OpenAI client and `VectorStore.close()`, new in the protocol). They exist only while the app runs; tests must use `with TestClient(app)`.
 - Settings now use [pydantic-settings](https://docs.pydantic.dev/latest/concepts/pydantic_settings/): all fields can be set via environment variables or `.env`, limits are validated at startup, and `openai_api_key` is a `SecretStr` that never appears in `repr`. `load_settings()` and the direct `python-dotenv` dependency are removed.

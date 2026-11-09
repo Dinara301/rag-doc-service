@@ -123,4 +123,4 @@ def test_openai_failure_returns_502(make_app: AppFactory) -> None:
         query = client.post("/query", json={"question": "hello"})
     assert ingest.status_code == 502
     assert query.status_code == 502
-    assert ingest.json() == {"detail": "OpenAI request failed"}
+    assert ingest.json()["detail"] == "OpenAI request failed"

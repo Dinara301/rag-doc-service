@@ -1,6 +1,8 @@
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 
 import structlog
+from asgi_correlation_id import correlation_id
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from openai import (
@@ -11,6 +13,7 @@ from openai import (
     PermissionDeniedError,
     RateLimitError,
 )
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.schemas import ErrorResponse
 from app.rag.loaders import DocumentRejectedError
@@ -30,12 +33,30 @@ class MappedError:
     headers: dict[str, str] = field(default_factory=dict)
 
 
-def _error(status_code: int, detail: str, headers: dict[str, str] | None = None) -> JSONResponse:
-    """Build a JSON error response shaped like `ErrorResponse`."""
+REQUEST_ID_HEADER: str = "X-Request-ID"
+
+
+def _error(
+    status_code: int,
+    detail: str,
+    headers: Mapping[str, str] | None = None,
+    *,
+    set_request_id_header: bool = False,
+) -> JSONResponse:
+    """Build a JSON `ErrorResponse` carrying the current request's correlation ID.
+
+    The correlation-ID middleware adds the `X-Request-ID` header to normal responses. The
+    catch-all 500 handler runs outside that middleware, so it sets the header itself via
+    `set_request_id_header`.
+    """
+    request_id = correlation_id.get()
+    all_headers = dict(headers or {})
+    if set_request_id_header and request_id:
+        all_headers[REQUEST_ID_HEADER] = request_id
     return JSONResponse(
         status_code=status_code,
-        content=ErrorResponse(detail=detail).model_dump(),
-        headers=headers,
+        content=ErrorResponse(detail=detail, request_id=request_id).model_dump(),
+        headers=all_headers,
     )
 
 
@@ -70,6 +91,25 @@ def map_openai_error(exc: OpenAIError) -> MappedError:
 
 def register_exception_handlers(app: FastAPI) -> None:
     """Map domain and upstream errors to HTTP responses so routes stay free of try/except."""
+
+    @app.exception_handler(StarletteHTTPException)
+    async def handle_http_exception(_: Request, exc: StarletteHTTPException) -> JSONResponse:
+        """Return `HTTPException`s (404, 503, ...) as `ErrorResponse`, keeping their headers."""
+        return _error(exc.status_code, str(exc.detail), exc.headers)
+
+    @app.exception_handler(Exception)
+    async def handle_unexpected_error(_: Request, exc: Exception) -> JSONResponse:
+        """Return a generic 500 for anything unhandled; details go to the logs only.
+
+        Starlette re-raises the exception after this handler, and uvicorn then logs the full
+        traceback (with the same `request_id`, without locals), so only the event is logged here.
+        """
+        log.error("unhandled_exception", error_type=type(exc).__name__)
+        return _error(
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            "Internal server error",
+            set_request_id_header=True,
+        )
 
     @app.exception_handler(DocumentRejectedError)
     async def handle_rejected_document(_: Request, exc: DocumentRejectedError) -> JSONResponse:

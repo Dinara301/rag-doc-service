@@ -6,7 +6,7 @@ from asgi_correlation_id import CorrelationIdMiddleware
 from fastapi import FastAPI
 from openai import OpenAI
 
-from app.api.errors import register_exception_handlers
+from app.api.errors import REQUEST_ID_HEADER, register_exception_handlers
 from app.api.routes import router
 from app.config import Settings
 from app.dependencies import AppServices
@@ -18,8 +18,6 @@ from app.storage.vector_store import ChromaVectorStore, VectorStore
 # Placeholder so the app can start (and serve /health, /documents) without a key;
 # OpenAI-backed routes return 503 until OPENAI_API_KEY is configured.
 _UNCONFIGURED_API_KEY: str = "unconfigured"
-
-REQUEST_ID_HEADER: str = "X-Request-ID"
 
 log = structlog.get_logger(__name__)
 

@@ -64,6 +64,16 @@ Every response carries an `X-Request-ID` header, and every log line written duri
 
 `/metrics` has no authentication: expose it only on a private network. Counters are per instance, so scrape every replica.
 
+## Errors
+
+Errors (except FastAPI's 422 validation errors) share one JSON shape:
+
+```json
+{ "detail": "OpenAI request timed out", "request_id": "4ede32b925734861abd48c8b03ca8b41" }
+```
+
+`request_id` equals the `X-Request-ID` response header; quote it when reporting a problem. Unexpected failures return `500` with `"Internal server error"`; the details are only in the logs. Status codes per failure are listed in [DESIGN.md](DESIGN.md#failure-modes).
+
 ## Example
 
 Upload:
