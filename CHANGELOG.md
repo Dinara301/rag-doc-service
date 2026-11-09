@@ -38,6 +38,7 @@ Every commit that changes behavior, configuration, tooling, or documentation add
 
 ### Fixed
 
+- Documents with more chunks than Chroma's maximum batch size (5461) failed to store; writes are now split into batches of at most that size.
 - Failed multi-file uploads no longer leave earlier files stored ([ADR-0007](docs/adr/0007-ingest-consistency.md)): all files are embedded before any write, and documents already written by the request are deleted if a later write fails.
 - Logged exception tracebacks no longer include local variable values. structlog 26 shows locals by default (JSON and console), which could write up to 80 characters of uploaded bytes, document text or questions into the logs on any unhandled error.
 - Three docstring lines over 100 characters shortened (found by the new ruff config; no behavior change).
