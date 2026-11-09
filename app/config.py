@@ -1,7 +1,7 @@
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Self
 
-from pydantic import Field, SecretStr
+from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 CHAT_MODEL: str = "gpt-4o-mini"
@@ -27,10 +27,20 @@ class Settings(BaseSettings):
     chunk_size_tokens: int = Field(default=800, gt=0)
     chunk_overlap_tokens: int = Field(default=150, ge=0)
     max_file_bytes: int = Field(default=10 * 1024 * 1024, gt=0)
+    max_request_bytes: int = Field(default=50 * 1024 * 1024, gt=0)
     allowed_extensions: frozenset[str] = frozenset({".pdf", ".md", ".markdown", ".txt"})
+    openai_timeout_seconds: float = Field(default=30.0, gt=0)
+    openai_max_retries: int = Field(default=2, ge=0, le=10)
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
     log_json: bool = True
     metrics_enabled: bool = True
+
+    @model_validator(mode="after")
+    def _request_limit_fits_one_file(self) -> Self:
+        """Reject a request limit smaller than the per-file limit (one file could never fit)."""
+        if self.max_request_bytes < self.max_file_bytes:
+            raise ValueError("max_request_bytes must be >= max_file_bytes")
+        return self
 
     @property
     def openai_configured(self) -> bool:

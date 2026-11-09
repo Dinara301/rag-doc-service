@@ -47,14 +47,14 @@ flowchart LR
 **Ingest (`POST /documents`)**
 
 1. Validate **every** file before storing anything: allowed extension, size under the limit, readable PDF, non-empty text. One bad file rejects the whole request (HTTP 400) and nothing is stored.
-2. Split text into overlapping chunks.
-3. Embed chunks with OpenAI `text-embedding-3-small` (batched, 100 inputs per request).
-4. Upsert vectors and metadata (`document_id`, `filename`) into persistent Chroma at `data/chroma/`.
+2. Split every file's text into overlapping chunks.
+3. Embed all chunks of all files with OpenAI `text-embedding-3-small` (batched, 100 inputs per request). Nothing is written yet, so an OpenAI failure stores nothing.
+4. Write vectors and metadata (`document_id`, `filename`) to Chroma, one document at a time, in batches no larger than the Chroma client's maximum batch size (5461 in Chroma 1.5; one larger call fails). If a write fails, delete every document this request started writing, then return the error ([ADR-0007](docs/adr/0007-ingest-consistency.md)).
 5. Return document ids and chunk counts.
 
 Every request gets a correlation ID (`asgi-correlation-id` middleware): an inbound `X-Request-ID` UUID is kept, otherwise one is generated, and it is returned in the `X-Request-ID` response header. A structlog processor adds it as `request_id` to every log record written while the request is handled, including uvicorn's access line ([ADR-0005](docs/adr/0005-observability-stack.md)).
 
-Routes are synchronous (`def`), so FastAPI runs the blocking OpenAI/Chroma calls in its threadpool instead of the event loop. Domain errors are mapped to HTTP in one place (`app/api/errors.py`): `DocumentRejectedError` to 400, `OpenAIError` to 502.
+Routes are synchronous (`def`), so FastAPI runs the blocking OpenAI/Chroma calls in its threadpool instead of the event loop. Domain errors are mapped to HTTP in one place (`app/api/errors.py`): `DocumentRejectedError` to 400, and OpenAI errors by type ([ADR-0006](docs/adr/0006-openai-error-mapping.md)): rate limit 503 with `Retry-After`, credential errors 503, timeout 504, anything else 502. The OpenAI client has a configurable timeout and uses the SDK's built-in retries.
 
 **Query (`POST /query`)**
 
@@ -85,10 +85,10 @@ The API always attaches `sources` from retrieval (not from the model’s prose).
 | --- | --- | --- | --- |
 | `GET` | `/health/live` (alias `/health`) | `200` `{ "status": "ok" }`; never checks dependencies | — |
 | `GET` | `/health/ready` | `200` `{ "status": "ready", "reasons": [] }` | `503` `{ "status": "not_ready", "reasons": [...] }` when the API key is missing or the vector store does not answer a ping |
-| `POST` | `/documents` | `200` ingest summary | `400` unsupported type, empty, or too large; `502` OpenAI failure |
+| `POST` | `/documents` | `200` ingest summary | `400` unsupported type, empty, or too large; `502`/`503`/`504` OpenAI failure (see failure modes) |
 | `GET` | `/documents` | `200` list of `{ document_id, filename, chunk_count }` | — |
 | `DELETE` | `/documents/{document_id}` | `204` | `404` unknown id |
-| `POST` | `/query` | `200` answer JSON | `422` validation; `502` OpenAI failure |
+| `POST` | `/query` | `200` answer JSON | `422` validation; `502`/`503`/`504` OpenAI failure (see failure modes) |
 
 **Query request**
 
@@ -129,27 +129,37 @@ Decisions are in [ADR-0005](docs/adr/0005-observability-stack.md).
 - **Logs** (`app/logging_config.py`): JSON, one object per line on stdout, from our code, stdlib and uvicorn alike. Fields: `timestamp` (ISO, UTC), `level`, `logger`, `event`, `request_id` (only during a request) plus event fields. Events: `app_started`, `app_stopping`, `documents_ingested` (`document_count`, `chunk_count`), `query_answered` (`top_k`, `source_count`). Uvicorn's access line is its own message (client, request line, status) and carries `request_id`; latency comes from metrics. Set `LOG_JSON=false` for console output.
 - **Request ID**: `X-Request-ID` is accepted (UUID, dashed or 32-hex), generated otherwise, returned on every response, and attached to every log line of that request.
 - **Metrics** (`app/metrics.py`, `GET /metrics`, `METRICS_ENABLED`): `http_requests_total{handler,method,status}`, `http_request_duration_seconds{handler,method}` (buckets to 30s), `http_request_duration_highr_seconds` (all routes, fine buckets), request/response size summaries, and runtime metrics (`python_gc_*`, `python_info`, plus `process_*` CPU, memory and file descriptors on Linux). `handler` is the route template; health probes and `/metrics` are not counted. Counters are per instance.
-- **Never logged**: API keys, file contents, filenames, questions. `tests/test_logging.py` checks this on an ingest and query run.
+- **Never logged**: API keys, file contents, filenames, questions. Exception tracebacks keep file, line and function but never local variable values. `tests/test_logging.py` checks this on an ingest and query run.
 
 ## Failure modes
 
-| Situation | Behavior |
-| --- | --- |
-| Unsupported extension | `400` |
-| Empty extractable text | `400` |
-| Corrupt / unreadable PDF | `400` |
-| File over size limit (10 MiB) | `400` |
-| No documents / no hits | `200` + empty sources |
-| Unknown `document_id` on delete | `404` |
-| OpenAI HTTP/SDK error | `502` |
-| Missing `OPENAI_API_KEY` at runtime | `503` on ingest/query; `/health/ready` reports not ready, `/health/live` stays `200` |
+Error bodies are `ErrorResponse` (`detail`, `request_id`); `request_id` matches the `X-Request-ID` header. FastAPI's 422 validation body is unchanged.
+
+| Situation | Status and body | Client action | Tested in |
+| --- | --- | --- | --- |
+| Unsupported extension, empty text, unreadable PDF | `400`, reason in `detail`; nothing stored | Fix the file | `test_ingest_and_query.py`, `test_loaders.py` |
+| File over `MAX_FILE_BYTES` (10 MiB) | `400`; nothing stored | Split or shrink the file | `test_request_limits.py` |
+| Declared body over `MAX_REQUEST_BYTES` (50 MiB) | `413` before the body is read | Send fewer or smaller files | `test_request_limits.py` |
+| Invalid request (for example empty question) | `422`, FastAPI's validation body | Fix the request | `test_error_responses.py` |
+| Unknown `document_id` on delete | `404` | None | `test_error_responses.py` |
+| No documents or no hits | `200`, "not enough context" answer, empty `sources` | None | `test_ingest_and_query.py` |
+| `OPENAI_API_KEY` not set | `503`; `/health/ready` is `503`, `/health/live` stays `200` | Retry later; operator sets the key | `test_health.py`, `test_error_responses.py` |
+| OpenAI rate limit (after SDK retries) | `503` + `Retry-After` | Retry after the given seconds | `test_openai_errors.py` |
+| OpenAI rejects our key or permissions | `503` "Upstream service is misconfigured"; logged at error | Retry later; operator fixes the key | `test_openai_errors.py` |
+| OpenAI timeout (after SDK retries) | `504` | Retry with backoff | `test_openai_errors.py` |
+| Other OpenAI error (connection, 4xx, 5xx) | `502`; nothing stored on ingest | Retry with backoff | `test_openai_errors.py`, `test_ingest_consistency.py` |
+| Vector store write fails mid-ingest | `500`; this request's documents are deleted (`ingest_cleanup_failed` logged if that fails) | Retry the upload | `test_ingest_consistency.py` |
+| Vector store unreachable | `500` on requests that use it (catch-all); `/health/ready` is `503` | Retry later | `test_health.py` (readiness), `test_error_responses.py` (catch-all) |
+| Any other unexpected exception | `500` "Internal server error"; traceback (no locals) only in logs | Report the `request_id` | `test_error_responses.py`, `test_logging.py` |
+
+Upstream error text and stack traces never reach clients. Retries against OpenAI happen inside the SDK (`OPENAI_MAX_RETRIES`, `OPENAI_TIMEOUT_SECONDS`), so a failing request can take up to about `timeout x (retries + 1)` plus backoff.
 
 ## Security (v1)
 
 - Local, unauthenticated. Do not expose this process on a public network.
 - Do not log file contents, questions, or the API key (checked by tests).
 - `/metrics` is unauthenticated like the rest of the API; keep it on a private network.
-- Reject unexpected MIME/extensions; cap upload size.
+- Reject unexpected MIME/extensions; cap upload size per file (400) and per request from `Content-Length` (413, `app/api/limits.py`).
 
 ## Future work
 

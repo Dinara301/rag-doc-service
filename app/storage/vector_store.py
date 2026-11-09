@@ -71,8 +71,18 @@ class VectorStore(Protocol):
 class ChromaVectorStore:
     """`VectorStore` backed by a local persistent ChromaDB collection using cosine distance."""
 
-    def __init__(self, persist_path: Path, collection_name: str = "documents") -> None:
-        """Open or create the persistent Chroma store at `persist_path`, telemetry disabled."""
+    def __init__(
+        self,
+        persist_path: Path,
+        collection_name: str = "documents",
+        *,
+        max_batch_size: int | None = None,
+    ) -> None:
+        """Open or create the persistent Chroma store at `persist_path`, telemetry disabled.
+
+        `max_batch_size` caps how many chunks go into one Chroma `add` call; it defaults to the
+        client's own limit (a single larger call fails). Tests pass a small value.
+        """
         persist_path.mkdir(parents=True, exist_ok=True)
         # PersistentClient is typed as ClientAPI, which omits close(); the concrete Client has it.
         self._client = cast(
@@ -82,6 +92,7 @@ class ChromaVectorStore:
                 settings=ChromaSettings(anonymized_telemetry=False),
             ),
         )
+        self._max_batch_size = max_batch_size or self._client.get_max_batch_size()
         self._collection = self._client.get_or_create_collection(
             name=collection_name,
             metadata={"hnsw:space": "cosine"},
@@ -94,18 +105,24 @@ class ChromaVectorStore:
         chunks: list[StoredChunk],
         embeddings: list[list[float]],
     ) -> None:
-        """Persist chunks with their embeddings; `ids`, `chunks` and `embeddings` align by index."""
-        if not ids:
-            return
-        vectors: _ChromaEmbeddings = [*embeddings]
-        self._collection.add(
-            ids=ids,
-            documents=[chunk.text for chunk in chunks],
-            embeddings=vectors,
-            metadatas=[
-                {"document_id": chunk.document_id, "filename": chunk.filename} for chunk in chunks
-            ],
-        )
+        """Persist chunks with their embeddings in batches of at most `max_batch_size`.
+
+        `ids`, `chunks` and `embeddings` align by index. If a later batch fails, earlier batches
+        stay written; ingest deletes the document in that case (ADR-0007).
+        """
+        for start in range(0, len(ids), self._max_batch_size):
+            end = start + self._max_batch_size
+            batch_chunks = chunks[start:end]
+            vectors: _ChromaEmbeddings = [*embeddings[start:end]]
+            self._collection.add(
+                ids=ids[start:end],
+                documents=[chunk.text for chunk in batch_chunks],
+                embeddings=vectors,
+                metadatas=[
+                    {"document_id": chunk.document_id, "filename": chunk.filename}
+                    for chunk in batch_chunks
+                ],
+            )
 
     def query(self, *, embedding: list[float], top_k: int) -> list[RetrievedChunk]:
         """Return up to `top_k` chunks nearest to `embedding`, best match first.

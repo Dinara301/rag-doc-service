@@ -90,3 +90,47 @@ def test_request_logs_never_contain_key_document_text_or_question(
     assert {"app_started", "documents_ingested", "query_answered"} <= set(events)
     for sensitive in (API_KEY_CANARY, "CONFIDENTIAL", "launch code", "4242", "secret.txt"):
         assert sensitive not in output
+
+
+@pytest.mark.parametrize("json_logs", [True, False])
+def test_tracebacks_never_include_local_variables(
+    capsys: pytest.CaptureFixture[str], json_logs: bool
+) -> None:
+    """Logged exceptions keep the stack but drop locals, which may hold user content."""
+    configure_logging("INFO", json_logs=json_logs)
+
+    def ingest_step() -> None:
+        document_text = DOCUMENT_TEXT
+        raise ValueError(f"failed after {len(document_text)} chars")
+
+    try:
+        ingest_step()
+    except ValueError:
+        structlog.get_logger("demo").exception("step_failed")
+
+    output = capsys.readouterr().out
+    assert "step_failed" in output
+    assert "ingest_step" in output
+    assert "ValueError" in output
+    assert "CONFIDENTIAL" not in output
+
+
+def test_stdlib_exception_logs_never_include_local_variables(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Uvicorn-style stdlib `logger.exception` calls are rendered without locals too."""
+    configure_logging("INFO", json_logs=True)
+
+    def handle_request() -> None:
+        question = QUESTION
+        raise RuntimeError(f"boom on {len(question)}")
+
+    try:
+        handle_request()
+    except RuntimeError:
+        logging.getLogger("uvicorn.error").exception("Exception in ASGI application")
+
+    output = capsys.readouterr().out
+    record = _json_lines(output)[0]
+    assert record["exception"]
+    assert "CONFIDENTIAL" not in output

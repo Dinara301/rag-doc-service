@@ -7,6 +7,12 @@ from asgi_correlation_id import correlation_id
 _HANDLER_MARKER = "_doc_qa_handler"
 _UVICORN_LOGGERS = ("uvicorn", "uvicorn.error", "uvicorn.access")
 
+# Structured tracebacks without local variables: structlog shows locals by default, and they can
+# hold uploaded bytes, document text or questions, which must never reach the logs.
+_DICT_TRACEBACKS = structlog.processors.ExceptionRenderer(
+    structlog.tracebacks.ExceptionDictTransformer(show_locals=False)
+)
+
 
 def add_request_id(
     logger: object, method_name: str, event_dict: structlog.typing.EventDict
@@ -49,13 +55,16 @@ def configure_logging(level: str = "INFO", *, json_logs: bool = True) -> None:
     renderer: structlog.typing.Processor = (
         structlog.processors.JSONRenderer()
         if json_logs
-        else structlog.dev.ConsoleRenderer(colors=sys.stdout.isatty())
+        else structlog.dev.ConsoleRenderer(
+            colors=sys.stdout.isatty(),
+            exception_formatter=structlog.dev.plain_traceback,
+        )
     )
     formatter = structlog.stdlib.ProcessorFormatter(
         foreign_pre_chain=shared_processors,
         processors=[
             structlog.stdlib.ProcessorFormatter.remove_processors_meta,
-            *([structlog.processors.dict_tracebacks] if json_logs else []),
+            *([_DICT_TRACEBACKS] if json_logs else []),
             renderer,
         ],
     )

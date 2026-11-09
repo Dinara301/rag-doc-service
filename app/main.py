@@ -6,7 +6,8 @@ from asgi_correlation_id import CorrelationIdMiddleware
 from fastapi import FastAPI
 from openai import OpenAI
 
-from app.api.errors import register_exception_handlers
+from app.api.errors import REQUEST_ID_HEADER, register_exception_handlers
+from app.api.limits import RequestSizeLimitMiddleware
 from app.api.routes import router
 from app.config import Settings
 from app.dependencies import AppServices
@@ -19,9 +20,20 @@ from app.storage.vector_store import ChromaVectorStore, VectorStore
 # OpenAI-backed routes return 503 until OPENAI_API_KEY is configured.
 _UNCONFIGURED_API_KEY: str = "unconfigured"
 
-REQUEST_ID_HEADER: str = "X-Request-ID"
-
 log = structlog.get_logger(__name__)
+
+
+def build_openai_client(settings: Settings) -> OpenAI:
+    """Create the OpenAI client with the configured timeout and retry budget.
+
+    The SDK retries connection errors, 408, 409, 429 and 5xx responses with exponential
+    backoff; `openai_max_retries=0` disables that.
+    """
+    return OpenAI(
+        api_key=settings.openai_api_key.get_secret_value() or _UNCONFIGURED_API_KEY,
+        timeout=settings.openai_timeout_seconds,
+        max_retries=settings.openai_max_retries,
+    )
 
 
 def create_app(
@@ -53,9 +65,7 @@ def create_app(
 
             resolved_embedder, resolved_generator = embedder, generator
             if resolved_embedder is None or resolved_generator is None:
-                client = OpenAI(
-                    api_key=resolved.openai_api_key.get_secret_value() or _UNCONFIGURED_API_KEY
-                )
+                client = build_openai_client(resolved)
                 stack.callback(client.close)
                 resolved_embedder = resolved_embedder or OpenAIEmbedder(
                     client, resolved.embedding_model
@@ -81,6 +91,8 @@ def create_app(
             del app.state.services
 
     app = FastAPI(title="doc-qa-api", version="0.1.0", lifespan=lifespan)
+    # Added first so it runs inside the correlation-ID middleware and its 413 carries the ID.
+    app.add_middleware(RequestSizeLimitMiddleware, max_bytes=resolved.max_request_bytes)
     app.add_middleware(CorrelationIdMiddleware, header_name=REQUEST_ID_HEADER)
     if resolved.metrics_enabled:
         setup_metrics(app)

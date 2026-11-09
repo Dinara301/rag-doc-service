@@ -4,6 +4,7 @@ import pytest
 from pydantic import SecretStr, ValidationError
 
 from app.config import CHAT_MODEL, DEFAULT_CHROMA_PATH, Settings
+from app.main import build_openai_client
 
 
 @pytest.fixture(autouse=True)
@@ -67,3 +68,42 @@ def test_invalid_values_are_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
 
     with pytest.raises(ValidationError):
         Settings(max_file_bytes=0)
+
+
+def test_openai_client_uses_timeout_and_retry_settings() -> None:
+    """The built OpenAI client carries the configured timeout and retry budget."""
+    settings = Settings(
+        openai_api_key=SecretStr("sk-test"), openai_timeout_seconds=12.5, openai_max_retries=4
+    )
+
+    client = build_openai_client(settings)
+    try:
+        assert client.timeout == 12.5
+        assert client.max_retries == 4
+    finally:
+        client.close()
+
+
+def test_openai_client_defaults() -> None:
+    """Defaults are a 30s timeout and the SDK's usual 2 retries."""
+    client = build_openai_client(Settings())
+    try:
+        assert client.timeout == 30.0
+        assert client.max_retries == 2
+    finally:
+        client.close()
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        {"openai_timeout_seconds": 0},
+        {"openai_timeout_seconds": -1},
+        {"openai_max_retries": -1},
+        {"openai_max_retries": 11},
+    ],
+)
+def test_invalid_openai_limits_are_rejected(overrides: dict[str, float]) -> None:
+    """Non-positive timeouts and out-of-range retry counts fail at startup."""
+    with pytest.raises(ValidationError):
+        Settings(**overrides)  # type: ignore[arg-type]

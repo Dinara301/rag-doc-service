@@ -31,10 +31,13 @@ Settings come from environment variables or a local `.env` file ([pydantic-setti
 | `OPENAI_API_KEY` | empty | Required for ingest and query (503 without it) |
 | `CHAT_MODEL` | `gpt-4o-mini` | Answer model |
 | `EMBEDDING_MODEL` | `text-embedding-3-small` | Embedding model |
+| `OPENAI_TIMEOUT_SECONDS` | `30` | Per-request timeout for OpenAI calls |
+| `OPENAI_MAX_RETRIES` | `2` | SDK retries (0-10) with backoff on connection errors, 408, 409, 429 and 5xx |
 | `CHROMA_PATH` | `data/chroma` | Embedded Chroma directory |
 | `CHUNK_SIZE_TOKENS` | `800` | Approximate chunk size |
 | `CHUNK_OVERLAP_TOKENS` | `150` | Approximate chunk overlap |
-| `MAX_FILE_BYTES` | `10485760` | Per-file upload limit |
+| `MAX_FILE_BYTES` | `10485760` | Per-file upload limit (400 when exceeded) |
+| `MAX_REQUEST_BYTES` | `52428800` | Whole-request limit, checked from `Content-Length` before the body is read (413); must be >= `MAX_FILE_BYTES` |
 | `LOG_LEVEL` | `INFO` | `DEBUG`, `INFO`, `WARNING`, `ERROR` or `CRITICAL` |
 | `LOG_JSON` | `true` | JSON lines on stdout; `false` for readable console output in development |
 | `METRICS_ENABLED` | `true` | Expose Prometheus metrics at `/metrics` |
@@ -61,6 +64,16 @@ Every response carries an `X-Request-ID` header, and every log line written duri
 `GET /metrics` serves Prometheus metrics ([ADR-0005](docs/adr/0005-observability-stack.md)); set `METRICS_ENABLED=false` to turn it off. Main series: `http_requests_total{handler,method,status}` (status grouped as `2xx`, `4xx`, `5xx`), `http_request_duration_seconds{handler,method}` (buckets up to 30s) request/response size summaries, and runtime metrics (`python_gc_*`, `python_info`, plus `process_*` CPU, memory and file descriptors on Linux). `handler` is the route template, for example `/documents/{document_id}`, so label cardinality stays bounded. Health probes and `/metrics` are not counted.
 
 `/metrics` has no authentication: expose it only on a private network. Counters are per instance, so scrape every replica.
+
+## Errors
+
+Errors (except FastAPI's 422 validation errors) share one JSON shape:
+
+```json
+{ "detail": "OpenAI request timed out", "request_id": "4ede32b925734861abd48c8b03ca8b41" }
+```
+
+`request_id` equals the `X-Request-ID` response header; quote it when reporting a problem. Unexpected failures return `500` with `"Internal server error"`; the details are only in the logs. Status codes per failure are listed in [DESIGN.md](DESIGN.md#failure-modes).
 
 ## Example
 

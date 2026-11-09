@@ -8,6 +8,8 @@ Every commit that changes behavior, configuration, tooling, or documentation add
 
 ### Added
 
+- `MAX_REQUEST_BYTES` (default 50 MiB): requests whose `Content-Length` exceeds it get `413` before the body is read, so oversized uploads are not received, spooled or embedded.
+- `OPENAI_TIMEOUT_SECONDS` (default 30) and `OPENAI_MAX_RETRIES` (default 2) settings, applied to the OpenAI client; retries use the SDK's built-in backoff.
 - Prometheus metrics at `GET /metrics` ([prometheus-fastapi-instrumentator](https://github.com/trallnag/prometheus-fastapi-instrumentator)): request counts and latency per route template; `METRICS_ENABLED` setting; health probes and `/metrics` excluded; Python runtime metrics and, on Linux, process CPU/memory/file-descriptor metrics. ADR-0005 (metrics part).
 - Request correlation IDs ([asgi-correlation-id](https://github.com/snok/asgi-correlation-id)): every response has `X-Request-ID` (inbound UUIDs are kept) and every log line during a request carries `request_id`.
 - Structured JSON logging with [structlog](https://www.structlog.org/): stdlib and uvicorn logs share one format; `LOG_LEVEL` and `LOG_JSON` settings; `app_started`, `app_stopping`, `documents_ingested` and `query_answered` events that carry counts only. ADR-0005 (logging part).
@@ -22,6 +24,8 @@ Every commit that changes behavior, configuration, tooling, or documentation add
 
 ### Changed
 
+- Error bodies now include `request_id` (matches `X-Request-ID`), including `HTTPException` responses such as 404 and 503. Unexpected exceptions return a generic JSON `500` instead of a plain-text error; the traceback is logged only. FastAPI's 422 body is unchanged.
+- OpenAI failures map to precise status codes ([ADR-0006](docs/adr/0006-openai-error-mapping.md)): rate limit 503 with `Retry-After`, authentication/permission 503, timeout 504, other errors 502 (previously always 502). Upstream text is never returned; failures are logged as `openai_request_failed` with type and upstream status.
 - Services are now created in a FastAPI lifespan and closed on shutdown (OpenAI client and `VectorStore.close()`, new in the protocol). They exist only while the app runs; tests must use `with TestClient(app)`.
 - Settings now use [pydantic-settings](https://docs.pydantic.dev/latest/concepts/pydantic_settings/): all fields can be set via environment variables or `.env`, limits are validated at startup, and `openai_api_key` is a `SecretStr` that never appears in `repr`. `load_settings()` and the direct `python-dotenv` dependency are removed.
 - Project rules ([ADR-0002](docs/adr/0002-relax-dependency-and-infrastructure-rules.md)): prefer maintained libraries over hand-written code; LangChain/LlamaIndex allowed per component with an ADR (the RAG pipeline stays explicit); Docker and a Chroma server container allowed; added a Process section (ADRs, one logical commit, CHANGELOG, commit format). Auth, rate limiting, and managed databases remain out of scope until deployment.
@@ -34,6 +38,9 @@ Every commit that changes behavior, configuration, tooling, or documentation add
 
 ### Fixed
 
+- Documents with more chunks than Chroma's maximum batch size (5461) failed to store; writes are now split into batches of at most that size.
+- Failed multi-file uploads no longer leave earlier files stored ([ADR-0007](docs/adr/0007-ingest-consistency.md)): all files are embedded before any write, and documents already written by the request are deleted if a later write fails.
+- Logged exception tracebacks no longer include local variable values. structlog 26 shows locals by default (JSON and console), which could write up to 80 characters of uploaded bytes, document text or questions into the logs on any unhandled error.
 - Three docstring lines over 100 characters shortened (found by the new ruff config; no behavior change).
 - Python upper bound corrected from `<3.15` to `<3.14`. The first uv lock did not re-resolve, so it missed that Python 3.14 has no Intel-macOS `onnxruntime` wheel; `uv add`/`uv lock --upgrade` failed until the bound was lowered. No package versions changed.
 
