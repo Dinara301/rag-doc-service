@@ -28,6 +28,8 @@ class Settings(BaseSettings):
     chunk_overlap_tokens: int = Field(default=150, ge=0)
     max_file_bytes: int = Field(default=10 * 1024 * 1024, gt=0)
     allowed_extensions: frozenset[str] = frozenset({".pdf", ".md", ".markdown", ".txt"})
+    openai_timeout_seconds: float = Field(default=30.0, gt=0)
+    openai_max_retries: int = Field(default=2, ge=0, le=10)
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
     log_json: bool = True
     metrics_enabled: bool = True

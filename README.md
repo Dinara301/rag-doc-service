@@ -31,6 +31,8 @@ Settings come from environment variables or a local `.env` file ([pydantic-setti
 | `OPENAI_API_KEY` | empty | Required for ingest and query (503 without it) |
 | `CHAT_MODEL` | `gpt-4o-mini` | Answer model |
 | `EMBEDDING_MODEL` | `text-embedding-3-small` | Embedding model |
+| `OPENAI_TIMEOUT_SECONDS` | `30` | Per-request timeout for OpenAI calls |
+| `OPENAI_MAX_RETRIES` | `2` | SDK retries (0-10) with backoff on connection errors, 408, 409, 429 and 5xx |
 | `CHROMA_PATH` | `data/chroma` | Embedded Chroma directory |
 | `CHUNK_SIZE_TOKENS` | `800` | Approximate chunk size |
 | `CHUNK_OVERLAP_TOKENS` | `150` | Approximate chunk overlap |

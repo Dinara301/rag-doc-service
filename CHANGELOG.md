@@ -8,6 +8,7 @@ Every commit that changes behavior, configuration, tooling, or documentation add
 
 ### Added
 
+- `OPENAI_TIMEOUT_SECONDS` (default 30) and `OPENAI_MAX_RETRIES` (default 2) settings, applied to the OpenAI client; retries use the SDK's built-in backoff.
 - Prometheus metrics at `GET /metrics` ([prometheus-fastapi-instrumentator](https://github.com/trallnag/prometheus-fastapi-instrumentator)): request counts and latency per route template; `METRICS_ENABLED` setting; health probes and `/metrics` excluded; Python runtime metrics and, on Linux, process CPU/memory/file-descriptor metrics. ADR-0005 (metrics part).
 - Request correlation IDs ([asgi-correlation-id](https://github.com/snok/asgi-correlation-id)): every response has `X-Request-ID` (inbound UUIDs are kept) and every log line during a request carries `request_id`.
 - Structured JSON logging with [structlog](https://www.structlog.org/): stdlib and uvicorn logs share one format; `LOG_LEVEL` and `LOG_JSON` settings; `app_started`, `app_stopping`, `documents_ingested` and `query_answered` events that carry counts only. ADR-0005 (logging part).

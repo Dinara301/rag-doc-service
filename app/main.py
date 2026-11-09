@@ -24,6 +24,19 @@ REQUEST_ID_HEADER: str = "X-Request-ID"
 log = structlog.get_logger(__name__)
 
 
+def build_openai_client(settings: Settings) -> OpenAI:
+    """Create the OpenAI client with the configured timeout and retry budget.
+
+    The SDK retries connection errors, 408, 409, 429 and 5xx responses with exponential
+    backoff; `openai_max_retries=0` disables that.
+    """
+    return OpenAI(
+        api_key=settings.openai_api_key.get_secret_value() or _UNCONFIGURED_API_KEY,
+        timeout=settings.openai_timeout_seconds,
+        max_retries=settings.openai_max_retries,
+    )
+
+
 def create_app(
     settings: Settings | None = None,
     *,
@@ -53,9 +66,7 @@ def create_app(
 
             resolved_embedder, resolved_generator = embedder, generator
             if resolved_embedder is None or resolved_generator is None:
-                client = OpenAI(
-                    api_key=resolved.openai_api_key.get_secret_value() or _UNCONFIGURED_API_KEY
-                )
+                client = build_openai_client(resolved)
                 stack.callback(client.close)
                 resolved_embedder = resolved_embedder or OpenAIEmbedder(
                     client, resolved.embedding_model
