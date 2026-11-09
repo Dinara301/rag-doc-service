@@ -129,7 +129,7 @@ Decisions are in [ADR-0005](docs/adr/0005-observability-stack.md).
 - **Logs** (`app/logging_config.py`): JSON, one object per line on stdout, from our code, stdlib and uvicorn alike. Fields: `timestamp` (ISO, UTC), `level`, `logger`, `event`, `request_id` (only during a request) plus event fields. Events: `app_started`, `app_stopping`, `documents_ingested` (`document_count`, `chunk_count`), `query_answered` (`top_k`, `source_count`). Uvicorn's access line is its own message (client, request line, status) and carries `request_id`; latency comes from metrics. Set `LOG_JSON=false` for console output.
 - **Request ID**: `X-Request-ID` is accepted (UUID, dashed or 32-hex), generated otherwise, returned on every response, and attached to every log line of that request.
 - **Metrics** (`app/metrics.py`, `GET /metrics`, `METRICS_ENABLED`): `http_requests_total{handler,method,status}`, `http_request_duration_seconds{handler,method}` (buckets to 30s), `http_request_duration_highr_seconds` (all routes, fine buckets), request/response size summaries, and runtime metrics (`python_gc_*`, `python_info`, plus `process_*` CPU, memory and file descriptors on Linux). `handler` is the route template; health probes and `/metrics` are not counted. Counters are per instance.
-- **Never logged**: API keys, file contents, filenames, questions. `tests/test_logging.py` checks this on an ingest and query run.
+- **Never logged**: API keys, file contents, filenames, questions. Exception tracebacks keep file, line and function but never local variable values. `tests/test_logging.py` checks this on an ingest and query run.
 
 ## Failure modes
 

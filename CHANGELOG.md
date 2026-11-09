@@ -36,6 +36,7 @@ Every commit that changes behavior, configuration, tooling, or documentation add
 
 ### Fixed
 
+- Logged exception tracebacks no longer include local variable values. structlog 26 shows locals by default (JSON and console), which could write up to 80 characters of uploaded bytes, document text or questions into the logs on any unhandled error.
 - Three docstring lines over 100 characters shortened (found by the new ruff config; no behavior change).
 - Python upper bound corrected from `<3.15` to `<3.14`. The first uv lock did not re-resolve, so it missed that Python 3.14 has no Intel-macOS `onnxruntime` wheel; `uv add`/`uv lock --upgrade` failed until the bound was lowered. No package versions changed.
 
