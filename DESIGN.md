@@ -135,21 +135,24 @@ Decisions are in [ADR-0005](docs/adr/0005-observability-stack.md).
 
 Error bodies are `ErrorResponse` (`detail`, `request_id`); `request_id` matches the `X-Request-ID` header. FastAPI's 422 validation body is unchanged.
 
-| Situation | Behavior |
-| --- | --- |
-| Unsupported extension | `400` |
-| Empty extractable text | `400` |
-| Corrupt / unreadable PDF | `400` |
-| File over size limit (10 MiB) | `400` |
-| Declared request body over `MAX_REQUEST_BYTES` (50 MiB) | `413` before the body is read; requests without `Content-Length` are still bounded per file (proxy limit at deployment) |
-| No documents / no hits | `200` + empty sources |
-| Unknown `document_id` on delete | `404` |
-| OpenAI rate limit (after SDK retries) | `503` + `Retry-After` |
-| OpenAI rejects our API key or permissions | `503` "Upstream service is misconfigured" (logged at error level) |
-| OpenAI timeout (after SDK retries) | `504` |
-| Other OpenAI error (connection, 4xx, 5xx) | `502` |
-| Any unexpected exception | `500` `"Internal server error"`; traceback (no locals) only in logs |
-| Missing `OPENAI_API_KEY` at runtime | `503` on ingest/query; `/health/ready` reports not ready, `/health/live` stays `200` |
+| Situation | Status and body | Client action | Tested in |
+| --- | --- | --- | --- |
+| Unsupported extension, empty text, unreadable PDF | `400`, reason in `detail`; nothing stored | Fix the file | `test_ingest_and_query.py`, `test_loaders.py` |
+| File over `MAX_FILE_BYTES` (10 MiB) | `400`; nothing stored | Split or shrink the file | `test_request_limits.py` |
+| Declared body over `MAX_REQUEST_BYTES` (50 MiB) | `413` before the body is read | Send fewer or smaller files | `test_request_limits.py` |
+| Invalid request (for example empty question) | `422`, FastAPI's validation body | Fix the request | `test_error_responses.py` |
+| Unknown `document_id` on delete | `404` | None | `test_error_responses.py` |
+| No documents or no hits | `200`, "not enough context" answer, empty `sources` | None | `test_ingest_and_query.py` |
+| `OPENAI_API_KEY` not set | `503`; `/health/ready` is `503`, `/health/live` stays `200` | Retry later; operator sets the key | `test_health.py`, `test_error_responses.py` |
+| OpenAI rate limit (after SDK retries) | `503` + `Retry-After` | Retry after the given seconds | `test_openai_errors.py` |
+| OpenAI rejects our key or permissions | `503` "Upstream service is misconfigured"; logged at error | Retry later; operator fixes the key | `test_openai_errors.py` |
+| OpenAI timeout (after SDK retries) | `504` | Retry with backoff | `test_openai_errors.py` |
+| Other OpenAI error (connection, 4xx, 5xx) | `502`; nothing stored on ingest | Retry with backoff | `test_openai_errors.py`, `test_ingest_consistency.py` |
+| Vector store write fails mid-ingest | `500`; this request's documents are deleted (`ingest_cleanup_failed` logged if that fails) | Retry the upload | `test_ingest_consistency.py` |
+| Vector store unreachable | `500` on requests that use it (catch-all); `/health/ready` is `503` | Retry later | `test_health.py` (readiness), `test_error_responses.py` (catch-all) |
+| Any other unexpected exception | `500` "Internal server error"; traceback (no locals) only in logs | Report the `request_id` | `test_error_responses.py`, `test_logging.py` |
+
+Upstream error text and stack traces never reach clients. Retries against OpenAI happen inside the SDK (`OPENAI_MAX_RETRIES`, `OPENAI_TIMEOUT_SECONDS`), so a failing request can take up to about `timeout x (retries + 1)` plus backoff.
 
 ## Security (v1)
 
