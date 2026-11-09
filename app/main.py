@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from openai import OpenAI
 
 from app.api.errors import REQUEST_ID_HEADER, register_exception_handlers
+from app.api.limits import RequestSizeLimitMiddleware
 from app.api.routes import router
 from app.config import Settings
 from app.dependencies import AppServices
@@ -90,6 +91,8 @@ def create_app(
             del app.state.services
 
     app = FastAPI(title="doc-qa-api", version="0.1.0", lifespan=lifespan)
+    # Added first so it runs inside the correlation-ID middleware and its 413 carries the ID.
+    app.add_middleware(RequestSizeLimitMiddleware, max_bytes=resolved.max_request_bytes)
     app.add_middleware(CorrelationIdMiddleware, header_name=REQUEST_ID_HEADER)
     if resolved.metrics_enabled:
         setup_metrics(app)

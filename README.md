@@ -36,7 +36,8 @@ Settings come from environment variables or a local `.env` file ([pydantic-setti
 | `CHROMA_PATH` | `data/chroma` | Embedded Chroma directory |
 | `CHUNK_SIZE_TOKENS` | `800` | Approximate chunk size |
 | `CHUNK_OVERLAP_TOKENS` | `150` | Approximate chunk overlap |
-| `MAX_FILE_BYTES` | `10485760` | Per-file upload limit |
+| `MAX_FILE_BYTES` | `10485760` | Per-file upload limit (400 when exceeded) |
+| `MAX_REQUEST_BYTES` | `52428800` | Whole-request limit, checked from `Content-Length` before the body is read (413); must be >= `MAX_FILE_BYTES` |
 | `LOG_LEVEL` | `INFO` | `DEBUG`, `INFO`, `WARNING`, `ERROR` or `CRITICAL` |
 | `LOG_JSON` | `true` | JSON lines on stdout; `false` for readable console output in development |
 | `METRICS_ENABLED` | `true` | Expose Prometheus metrics at `/metrics` |

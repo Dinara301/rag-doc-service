@@ -36,7 +36,7 @@ class MappedError:
 REQUEST_ID_HEADER: str = "X-Request-ID"
 
 
-def _error(
+def error_response(
     status_code: int,
     detail: str,
     headers: Mapping[str, str] | None = None,
@@ -95,7 +95,7 @@ def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(StarletteHTTPException)
     async def handle_http_exception(_: Request, exc: StarletteHTTPException) -> JSONResponse:
         """Return `HTTPException`s (404, 503, ...) as `ErrorResponse`, keeping their headers."""
-        return _error(exc.status_code, str(exc.detail), exc.headers)
+        return error_response(exc.status_code, str(exc.detail), exc.headers)
 
     @app.exception_handler(Exception)
     async def handle_unexpected_error(_: Request, exc: Exception) -> JSONResponse:
@@ -105,7 +105,7 @@ def register_exception_handlers(app: FastAPI) -> None:
         traceback (with the same `request_id`, without locals), so only the event is logged here.
         """
         log.error("unhandled_exception", error_type=type(exc).__name__)
-        return _error(
+        return error_response(
             status.HTTP_500_INTERNAL_SERVER_ERROR,
             "Internal server error",
             set_request_id_header=True,
@@ -114,7 +114,7 @@ def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(DocumentRejectedError)
     async def handle_rejected_document(_: Request, exc: DocumentRejectedError) -> JSONResponse:
         """Return 400 with the rejection reason for files that cannot be ingested."""
-        return _error(status.HTTP_400_BAD_REQUEST, str(exc))
+        return error_response(status.HTTP_400_BAD_REQUEST, str(exc))
 
     @app.exception_handler(OpenAIError)
     async def handle_openai_error(_: Request, exc: OpenAIError) -> JSONResponse:
@@ -131,4 +131,4 @@ def register_exception_handlers(app: FastAPI) -> None:
             upstream_status=upstream_status,
             status_code=mapped.status_code,
         )
-        return _error(mapped.status_code, mapped.detail, mapped.headers or None)
+        return error_response(mapped.status_code, mapped.detail, mapped.headers or None)

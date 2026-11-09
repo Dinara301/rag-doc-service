@@ -141,6 +141,7 @@ Error bodies are `ErrorResponse` (`detail`, `request_id`); `request_id` matches 
 | Empty extractable text | `400` |
 | Corrupt / unreadable PDF | `400` |
 | File over size limit (10 MiB) | `400` |
+| Declared request body over `MAX_REQUEST_BYTES` (50 MiB) | `413` before the body is read; requests without `Content-Length` are still bounded per file (proxy limit at deployment) |
 | No documents / no hits | `200` + empty sources |
 | Unknown `document_id` on delete | `404` |
 | OpenAI rate limit (after SDK retries) | `503` + `Retry-After` |
@@ -155,7 +156,7 @@ Error bodies are `ErrorResponse` (`detail`, `request_id`); `request_id` matches 
 - Local, unauthenticated. Do not expose this process on a public network.
 - Do not log file contents, questions, or the API key (checked by tests).
 - `/metrics` is unauthenticated like the rest of the API; keep it on a private network.
-- Reject unexpected MIME/extensions; cap upload size.
+- Reject unexpected MIME/extensions; cap upload size per file (400) and per request from `Content-Length` (413, `app/api/limits.py`).
 
 ## Future work
 
