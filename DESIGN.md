@@ -47,9 +47,9 @@ flowchart LR
 **Ingest (`POST /documents`)**
 
 1. Validate **every** file before storing anything: allowed extension, size under the limit, readable PDF, non-empty text. One bad file rejects the whole request (HTTP 400) and nothing is stored.
-2. Split text into overlapping chunks.
-3. Embed chunks with OpenAI `text-embedding-3-small` (batched, 100 inputs per request).
-4. Upsert vectors and metadata (`document_id`, `filename`) into persistent Chroma at `data/chroma/`.
+2. Split every file's text into overlapping chunks.
+3. Embed all chunks of all files with OpenAI `text-embedding-3-small` (batched, 100 inputs per request). Nothing is written yet, so an OpenAI failure stores nothing.
+4. Write vectors and metadata (`document_id`, `filename`) to Chroma, one document at a time. If a write fails, delete every document this request started writing, then return the error ([ADR-0007](docs/adr/0007-ingest-consistency.md)).
 5. Return document ids and chunk counts.
 
 Every request gets a correlation ID (`asgi-correlation-id` middleware): an inbound `X-Request-ID` UUID is kept, otherwise one is generated, and it is returned in the `X-Request-ID` response header. A structlog processor adds it as `request_id` to every log record written while the request is handled, including uvicorn's access line ([ADR-0005](docs/adr/0005-observability-stack.md)).
