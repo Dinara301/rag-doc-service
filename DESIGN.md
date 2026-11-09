@@ -54,7 +54,7 @@ flowchart LR
 
 Every request gets a correlation ID (`asgi-correlation-id` middleware): an inbound `X-Request-ID` UUID is kept, otherwise one is generated, and it is returned in the `X-Request-ID` response header. A structlog processor adds it as `request_id` to every log record written while the request is handled, including uvicorn's access line ([ADR-0005](docs/adr/0005-observability-stack.md)).
 
-Routes are synchronous (`def`), so FastAPI runs the blocking OpenAI/Chroma calls in its threadpool instead of the event loop. Domain errors are mapped to HTTP in one place (`app/api/errors.py`): `DocumentRejectedError` to 400, `OpenAIError` to 502.
+Routes are synchronous (`def`), so FastAPI runs the blocking OpenAI/Chroma calls in its threadpool instead of the event loop. Domain errors are mapped to HTTP in one place (`app/api/errors.py`): `DocumentRejectedError` to 400, and OpenAI errors by type ([ADR-0006](docs/adr/0006-openai-error-mapping.md)): rate limit 503 with `Retry-After`, credential errors 503, timeout 504, anything else 502. The OpenAI client has a configurable timeout and uses the SDK's built-in retries.
 
 **Query (`POST /query`)**
 
@@ -85,10 +85,10 @@ The API always attaches `sources` from retrieval (not from the model’s prose).
 | --- | --- | --- | --- |
 | `GET` | `/health/live` (alias `/health`) | `200` `{ "status": "ok" }`; never checks dependencies | — |
 | `GET` | `/health/ready` | `200` `{ "status": "ready", "reasons": [] }` | `503` `{ "status": "not_ready", "reasons": [...] }` when the API key is missing or the vector store does not answer a ping |
-| `POST` | `/documents` | `200` ingest summary | `400` unsupported type, empty, or too large; `502` OpenAI failure |
+| `POST` | `/documents` | `200` ingest summary | `400` unsupported type, empty, or too large; `502`/`503`/`504` OpenAI failure (see failure modes) |
 | `GET` | `/documents` | `200` list of `{ document_id, filename, chunk_count }` | — |
 | `DELETE` | `/documents/{document_id}` | `204` | `404` unknown id |
-| `POST` | `/query` | `200` answer JSON | `422` validation; `502` OpenAI failure |
+| `POST` | `/query` | `200` answer JSON | `422` validation; `502`/`503`/`504` OpenAI failure (see failure modes) |
 
 **Query request**
 
@@ -141,7 +141,10 @@ Decisions are in [ADR-0005](docs/adr/0005-observability-stack.md).
 | File over size limit (10 MiB) | `400` |
 | No documents / no hits | `200` + empty sources |
 | Unknown `document_id` on delete | `404` |
-| OpenAI HTTP/SDK error | `502` |
+| OpenAI rate limit (after SDK retries) | `503` + `Retry-After` |
+| OpenAI rejects our API key or permissions | `503` "Upstream service is misconfigured" (logged at error level) |
+| OpenAI timeout (after SDK retries) | `504` |
+| Other OpenAI error (connection, 4xx, 5xx) | `502` |
 | Missing `OPENAI_API_KEY` at runtime | `503` on ingest/query; `/health/ready` reports not ready, `/health/live` stays `200` |
 
 ## Security (v1)

@@ -49,3 +49,4 @@ Two or three bullets: what gets easier, harder, or must be watched.
 - [0003. Use uv, ruff, and pre-commit](0003-use-uv-ruff-and-pre-commit.md) - Accepted
 - [0004. Config, lifespan, and health checks](0004-config-lifespan-and-health.md) - Accepted
 - [0005. Observability stack](0005-observability-stack.md) - Accepted
+- [0006. OpenAI error mapping and retries](0006-openai-error-mapping.md) - Accepted
