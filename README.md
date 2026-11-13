@@ -16,9 +16,12 @@ Python 3.11 to 3.13. Dependencies are managed with [uv](https://docs.astral.sh/u
 
 ```bash
 uv sync                  # creates .venv from uv.lock (runtime + dev tools)
+uv run python scripts/warm_tiktoken.py   # one-time download of the tokenizer file
 cp .env.example .env
 # set OPENAI_API_KEY in .env
 ```
+
+The warm step fills `.cache/tiktoken` (ignored by git) so chunking, tests and containers need no network afterwards ([ADR-0008](docs/adr/0008-token-aware-chunking-library.md)); tests stop with a clear message if it is missing. Set `TIKTOKEN_CACHE_DIR` to use another directory.
 
 Use `uv run <command>` to run anything inside the environment (or `source .venv/bin/activate`). To change dependencies use `uv add <pkg>` (or `uv add --dev <pkg>`), which updates `pyproject.toml` and `uv.lock` together; commit both.
 

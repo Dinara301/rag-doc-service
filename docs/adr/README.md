@@ -51,3 +51,4 @@ Two or three bullets: what gets easier, harder, or must be watched.
 - [0005. Observability stack](0005-observability-stack.md) - Accepted
 - [0006. OpenAI error mapping and retries](0006-openai-error-mapping.md) - Accepted
 - [0007. Ingest consistency](0007-ingest-consistency.md) - Accepted
+- [0008. Token-aware chunking with a library](0008-token-aware-chunking-library.md) - Accepted

@@ -8,6 +8,7 @@ Every commit that changes behavior, configuration, tooling, or documentation add
 
 ### Added
 
+- `langchain-text-splitters` and `tiktoken` dependencies (ADR-0008), `scripts/warm_tiktoken.py`, and `app/rag/tokenizer.py` for an offline-safe `cl100k_base` encoding cached in `.cache/tiktoken`. Run the warm script once per checkout; tests stop with a clear message if the cache is empty. The chunker itself switches in the next change.
 - `MAX_REQUEST_BYTES` (default 50 MiB): requests whose `Content-Length` exceeds it get `413` before the body is read, so oversized uploads are not received, spooled or embedded.
 - `OPENAI_TIMEOUT_SECONDS` (default 30) and `OPENAI_MAX_RETRIES` (default 2) settings, applied to the OpenAI client; retries use the SDK's built-in backoff.
 - Prometheus metrics at `GET /metrics` ([prometheus-fastapi-instrumentator](https://github.com/trallnag/prometheus-fastapi-instrumentator)): request counts and latency per route template; `METRICS_ENABLED` setting; health probes and `/metrics` excluded; Python runtime metrics and, on Linux, process CPU/memory/file-descriptor metrics. ADR-0005 (metrics part).
