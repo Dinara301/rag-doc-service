@@ -16,11 +16,14 @@
 
 ## Decision
 
-Adopt `langchain-text-splitters` (splitter package only, no chains or retrievers) and `tiktoken` with `cl100k_base`, the encoding of `text-embedding-3-small`. `tiktoken` downloads that file on first use, so `TIKTOKEN_CACHE_DIR` points at `.cache/tiktoken`, filled by `scripts/warm_tiktoken.py`; tests refuse to run on an empty cache instead of downloading.
+- Adopt `langchain-text-splitters` (splitter package only, no chains or retrievers) and `tiktoken` with `cl100k_base`, the encoding of `text-embedding-3-small`.
+- Use `RecursiveCharacterTextSplitter.from_language(MARKDOWN)` with our own token counter. `MarkdownHeaderTextSplitter` was rejected because it rewrites text (two trailing spaces per line, blank lines dropped); `from_tiktoken_encoder` was rejected because it raises on `<|endoftext|>` in documents.
+- `tiktoken` downloads its encoding file on first use, so `TIKTOKEN_CACHE_DIR` points at `.cache/tiktoken`, filled by `scripts/warm_tiktoken.py`; tests refuse to run on an empty cache instead of downloading.
 
 ## Consequences
 
 - Chunk limits become exact token counts; no network is needed at test or run time once the cache is warm.
 - Setup gains one step (the warm script); container builds must run it (Plan 08).
 - `langchain-core` and its dependencies are installed; the RAG pipeline itself stays explicit.
-- Chunk boundaries will change in the next step, so existing documents should be re-ingested.
+- Chunk boundaries differ from the old chunker, so existing documents should be re-ingested.
+- Chunking costs CPU (about 0.4-1.5 s per MB) in the request thread.

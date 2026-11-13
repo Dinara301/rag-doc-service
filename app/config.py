@@ -36,6 +36,13 @@ class Settings(BaseSettings):
     metrics_enabled: bool = True
 
     @model_validator(mode="after")
+    def _overlap_is_smaller_than_chunk(self) -> Self:
+        """Reject an overlap that is not smaller than the chunk size (the splitter requires it)."""
+        if self.chunk_overlap_tokens >= self.chunk_size_tokens:
+            raise ValueError("chunk_overlap_tokens must be smaller than chunk_size_tokens")
+        return self
+
+    @model_validator(mode="after")
     def _request_limit_fits_one_file(self) -> Self:
         """Reject a request limit smaller than the per-file limit (one file could never fit)."""
         if self.max_request_bytes < self.max_file_bytes:

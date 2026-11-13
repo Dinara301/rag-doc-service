@@ -107,3 +107,10 @@ def test_invalid_openai_limits_are_rejected(overrides: dict[str, float]) -> None
     """Non-positive timeouts and out-of-range retry counts fail at startup."""
     with pytest.raises(ValidationError):
         Settings(**overrides)  # type: ignore[arg-type]
+
+
+def test_chunk_overlap_must_be_smaller_than_chunk_size() -> None:
+    """The splitter library needs overlap < size, so settings reject anything else at startup."""
+    with pytest.raises(ValidationError, match="chunk_overlap_tokens"):
+        Settings(chunk_size_tokens=100, chunk_overlap_tokens=100)
+    assert Settings(chunk_size_tokens=100, chunk_overlap_tokens=99).chunk_overlap_tokens == 99

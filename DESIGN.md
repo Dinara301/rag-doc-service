@@ -65,9 +65,14 @@ Routes are synchronous (`def`), so FastAPI runs the blocking OpenAI/Chroma calls
 
 ## Chunking
 
-- Approximate token length as 4 characters per token.
-- Target chunk size **800 tokens**, overlap **150 tokens**.
-- Prefer breaking on Markdown headings (`#{1,6} `) and blank lines; fall back to a character window if a unit is still too large.
+Implemented with `langchain-text-splitters` and `tiktoken` ([ADR-0008](docs/adr/0008-token-aware-chunking-library.md)); `app/rag/chunking.py` is a thin wrapper.
+
+- Size is measured in real `cl100k_base` tokens (the encoding of `text-embedding-3-small`). Target **800 tokens**, overlap **150 tokens**; the overlap counts toward the limit, so no chunk exceeds 800 tokens.
+- A Markdown-aware recursive splitter prefers headings, code fences, blank lines, lines and words, in that order. Small sections are packed together; oversized text is cut at the most natural boundary available (down to characters for text with no separators).
+- Text is never rewritten: chunks are exact slices of the extracted text (a closing code fence may start the next chunk).
+- Special-token strings such as `<|endoftext|>` in documents are treated as plain text.
+- The tokenizer file is read from `TIKTOKEN_CACHE_DIR` (default `.cache/tiktoken`, filled by `scripts/warm_tiktoken.py`), so there is no network access at run time.
+- Cost: about 0.4 s per MB for headed Markdown and up to about 1.5 s per MB for text without paragraph breaks, in the request's worker thread (a 10 MiB single-paragraph file takes about 15 s, well under the embedding time).
 
 ## Prompt contract
 

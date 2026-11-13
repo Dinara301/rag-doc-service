@@ -8,7 +8,7 @@ Every commit that changes behavior, configuration, tooling, or documentation add
 
 ### Added
 
-- `langchain-text-splitters` and `tiktoken` dependencies (ADR-0008), `scripts/warm_tiktoken.py`, and `app/rag/tokenizer.py` for an offline-safe `cl100k_base` encoding cached in `.cache/tiktoken`. Run the warm script once per checkout; tests stop with a clear message if the cache is empty. The chunker itself switches in the next change.
+- `langchain-text-splitters` and `tiktoken` dependencies (ADR-0008), `scripts/warm_tiktoken.py`, and `app/rag/tokenizer.py` for an offline-safe `cl100k_base` encoding cached in `.cache/tiktoken`. Run the warm script once per checkout; tests stop with a clear message if the cache is empty.
 - `MAX_REQUEST_BYTES` (default 50 MiB): requests whose `Content-Length` exceeds it get `413` before the body is read, so oversized uploads are not received, spooled or embedded.
 - `OPENAI_TIMEOUT_SECONDS` (default 30) and `OPENAI_MAX_RETRIES` (default 2) settings, applied to the OpenAI client; retries use the SDK's built-in backoff.
 - Prometheus metrics at `GET /metrics` ([prometheus-fastapi-instrumentator](https://github.com/trallnag/prometheus-fastapi-instrumentator)): request counts and latency per route template; `METRICS_ENABLED` setting; health probes and `/metrics` excluded; Python runtime metrics and, on Linux, process CPU/memory/file-descriptor metrics. ADR-0005 (metrics part).
@@ -25,6 +25,7 @@ Every commit that changes behavior, configuration, tooling, or documentation add
 
 ### Changed
 
+- Chunking uses `langchain-text-splitters` with real token counts ([ADR-0008](docs/adr/0008-token-aware-chunking-library.md)) instead of the hand-written 4-characters-per-token splitter. Chunks never exceed `CHUNK_SIZE_TOKENS` (overlap included), text is no longer rewritten, and special-token strings in documents are safe. **Chunk boundaries differ: re-ingest existing documents.** `CHUNK_OVERLAP_TOKENS` must now be smaller than `CHUNK_SIZE_TOKENS` (validated at startup).
 - Error bodies now include `request_id` (matches `X-Request-ID`), including `HTTPException` responses such as 404 and 503. Unexpected exceptions return a generic JSON `500` instead of a plain-text error; the traceback is logged only. FastAPI's 422 body is unchanged.
 - OpenAI failures map to precise status codes ([ADR-0006](docs/adr/0006-openai-error-mapping.md)): rate limit 503 with `Retry-After`, authentication/permission 503, timeout 504, other errors 502 (previously always 502). Upstream text is never returned; failures are logged as `openai_request_failed` with type and upstream status.
 - Services are now created in a FastAPI lifespan and closed on shutdown (OpenAI client and `VectorStore.close()`, new in the protocol). They exist only while the app runs; tests must use `with TestClient(app)`.
