@@ -16,9 +16,12 @@ Python 3.11 to 3.13. Dependencies are managed with [uv](https://docs.astral.sh/u
 
 ```bash
 uv sync                  # creates .venv from uv.lock (runtime + dev tools)
+uv run python scripts/warm_tiktoken.py   # one-time download of the tokenizer file
 cp .env.example .env
 # set OPENAI_API_KEY in .env
 ```
+
+The warm step fills `.cache/tiktoken` (ignored by git) so chunking, tests and containers need no network afterwards ([ADR-0008](docs/adr/0008-token-aware-chunking-library.md)); tests stop with a clear message if it is missing. Set `TIKTOKEN_CACHE_DIR` to use another directory.
 
 Use `uv run <command>` to run anything inside the environment (or `source .venv/bin/activate`). To change dependencies use `uv add <pkg>` (or `uv add --dev <pkg>`), which updates `pyproject.toml` and `uv.lock` together; commit both.
 
@@ -34,8 +37,8 @@ Settings come from environment variables or a local `.env` file ([pydantic-setti
 | `OPENAI_TIMEOUT_SECONDS` | `30` | Per-request timeout for OpenAI calls |
 | `OPENAI_MAX_RETRIES` | `2` | SDK retries (0-10) with backoff on connection errors, 408, 409, 429 and 5xx |
 | `CHROMA_PATH` | `data/chroma` | Embedded Chroma directory |
-| `CHUNK_SIZE_TOKENS` | `800` | Approximate chunk size |
-| `CHUNK_OVERLAP_TOKENS` | `150` | Approximate chunk overlap |
+| `CHUNK_SIZE_TOKENS` | `800` | Maximum chunk size in `cl100k_base` tokens |
+| `CHUNK_OVERLAP_TOKENS` | `150` | Overlap between chunks in tokens (counted inside the size; must be smaller than it) |
 | `MAX_FILE_BYTES` | `10485760` | Per-file upload limit (400 when exceeded) |
 | `MAX_REQUEST_BYTES` | `52428800` | Whole-request limit, checked from `Content-Length` before the body is read (413); must be >= `MAX_FILE_BYTES` |
 | `LOG_LEVEL` | `INFO` | `DEBUG`, `INFO`, `WARNING`, `ERROR` or `CRITICAL` |

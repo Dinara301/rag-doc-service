@@ -11,7 +11,7 @@ Operators need a small local REST API that ingests technical documentation (PDF,
 - UI or streaming responses
 - Authentication, multi-tenancy, or rate limiting
 - Managed or hosted vector databases, and deployment infrastructure (TLS, gateway, orchestration). Docker packaging is allowed; deployment itself is a later stage
-- Framework-level RAG pipelines (LangChain, LlamaIndex). Individual maintained libraries are used where they replace hand-written code (see [ADR-0002](docs/adr/0002-relax-dependency-and-infrastructure-rules.md))
+- Framework-level RAG pipelines (LangChain, LlamaIndex). Individual maintained libraries are used where they replace hand-written code (see [ADR-0002](docs/adr/0002-relax-dependency-and-infrastructure-rules.md)); the text splitter is the first ([ADR-0008](docs/adr/0008-token-aware-chunking-library.md))
 - Re-ingest/versioning, OCR, or additional file types (HTML, DOCX)
 
 ## Components
@@ -65,9 +65,14 @@ Routes are synchronous (`def`), so FastAPI runs the blocking OpenAI/Chroma calls
 
 ## Chunking
 
-- Approximate token length as 4 characters per token.
-- Target chunk size **800 tokens**, overlap **150 tokens**.
-- Prefer breaking on Markdown headings (`#{1,6} `) and blank lines; fall back to a character window if a unit is still too large.
+Implemented with `langchain-text-splitters` and `tiktoken` ([ADR-0008](docs/adr/0008-token-aware-chunking-library.md)); `app/rag/chunking.py` is a thin wrapper.
+
+- Size is measured in real `cl100k_base` tokens (the encoding of `text-embedding-3-small`). Target **800 tokens**, overlap **150 tokens**; the overlap counts toward the limit, so no chunk exceeds 800 tokens.
+- A Markdown-aware recursive splitter prefers headings, code fences, blank lines, lines and words, in that order. Small sections are packed together; oversized text is cut at the most natural boundary available (down to characters for text with no separators).
+- Text is never rewritten: chunks are exact slices of the extracted text (a closing code fence may start the next chunk).
+- Special-token strings such as `<|endoftext|>` in documents are treated as plain text.
+- The tokenizer file is read from `TIKTOKEN_CACHE_DIR` (default `.cache/tiktoken`, filled by `scripts/warm_tiktoken.py`), so there is no network access at run time.
+- Cost: about 0.4 s per MB for headed Markdown and up to about 1.5 s per MB for text without paragraph breaks, in the request's worker thread (a 10 MiB single-paragraph file takes about 15 s, well under the embedding time).
 
 ## Prompt contract
 
@@ -119,8 +124,9 @@ The API always attaches `sources` from retrieval (not from the model’s prose).
 | Path | Contents |
 | --- | --- |
 | `data/chroma/` | Chroma persistent store (extracted text is stored as chunks; uploaded bytes are not kept) |
+| `.cache/tiktoken/` | Tokenizer file for chunking, filled once by `scripts/warm_tiktoken.py` (set `TIKTOKEN_CACHE_DIR` to move it); contains no user data |
 
-The directory is created when the app is built (`create_app`), not on import, and is gitignored.
+`data/chroma/` is created when the app is built (`create_app`), not on import. Both directories are gitignored.
 
 ## Observability
 

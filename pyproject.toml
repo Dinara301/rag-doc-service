@@ -19,6 +19,8 @@ dependencies = [
     "structlog>=26.1.0",
     "asgi-correlation-id>=5.0.1",
     "prometheus-fastapi-instrumentator>=8.1.0",
+    "langchain-text-splitters>=1.1.3",
+    "tiktoken>=0.14.0",
 ]
 
 [dependency-groups]
@@ -58,7 +60,7 @@ convention = "google"
 [tool.mypy]
 python_version = "3.11"
 strict = true
-files = ["app", "tests"]
+files = ["app", "scripts", "tests"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

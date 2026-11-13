@@ -10,9 +10,25 @@ from pydantic import SecretStr
 from app.config import Settings
 from app.main import create_app
 from app.rag.llm import Embedder
+from app.rag.tokenizer import configure_cache
 from app.storage.vector_store import RetrievedChunk
 
 AppFactory = Callable[..., FastAPI]
+
+
+@pytest.fixture(scope="session", autouse=True)
+def require_warm_tiktoken_cache() -> None:
+    """Stop early, with the fix, if the tiktoken encoding has not been downloaded yet.
+
+    Tests never download it themselves, so they behave the same with or without network.
+    """
+    cache_dir = configure_cache()
+    if not cache_dir.is_dir() or not any(cache_dir.iterdir()):
+        pytest.exit(
+            f"tiktoken cache {cache_dir} is empty. Run once: "
+            "uv run python scripts/warm_tiktoken.py",
+            returncode=2,
+        )
 
 
 class HashEmbedder:
