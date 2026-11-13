@@ -11,7 +11,7 @@ Operators need a small local REST API that ingests technical documentation (PDF,
 - UI or streaming responses
 - Authentication, multi-tenancy, or rate limiting
 - Managed or hosted vector databases, and deployment infrastructure (TLS, gateway, orchestration). Docker packaging is allowed; deployment itself is a later stage
-- Framework-level RAG pipelines (LangChain, LlamaIndex). Individual maintained libraries are used where they replace hand-written code (see [ADR-0002](docs/adr/0002-relax-dependency-and-infrastructure-rules.md))
+- Framework-level RAG pipelines (LangChain, LlamaIndex). Individual maintained libraries are used where they replace hand-written code (see [ADR-0002](docs/adr/0002-relax-dependency-and-infrastructure-rules.md)); the text splitter is the first ([ADR-0008](docs/adr/0008-token-aware-chunking-library.md))
 - Re-ingest/versioning, OCR, or additional file types (HTML, DOCX)
 
 ## Components
@@ -124,8 +124,9 @@ The API always attaches `sources` from retrieval (not from the model’s prose).
 | Path | Contents |
 | --- | --- |
 | `data/chroma/` | Chroma persistent store (extracted text is stored as chunks; uploaded bytes are not kept) |
+| `.cache/tiktoken/` | Tokenizer file for chunking, filled once by `scripts/warm_tiktoken.py` (set `TIKTOKEN_CACHE_DIR` to move it); contains no user data |
 
-The directory is created when the app is built (`create_app`), not on import, and is gitignored.
+`data/chroma/` is created when the app is built (`create_app`), not on import. Both directories are gitignored.
 
 ## Observability
 
